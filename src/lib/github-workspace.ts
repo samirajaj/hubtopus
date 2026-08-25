@@ -155,6 +155,10 @@ export type WorkflowFailure = {
 
 export type WorkspaceData = {
   analyzedAt: string;
+  connection: {
+    method: "personal-token" | "github-app";
+    expiresAt: string;
+  };
   user: AuthenticatedUser;
   repositories: WorkspaceRepository[];
   repositoriesTruncated: boolean;
@@ -224,6 +228,10 @@ export async function getWorkspaceData(): Promise<WorkspaceData | null> {
 
   return {
     analyzedAt: new Date().toISOString(),
+    connection: {
+      method: session.method,
+      expiresAt: new Date(session.expiresAt).toISOString(),
+    },
     user: {
       login: user.login,
       name: user.name,

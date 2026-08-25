@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { KeyRound, LockKeyhole } from "lucide-react";
+import { KeyRound, LockKeyhole, LogIn } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isGitHubAppConfigured } from "@/lib/github-auth";
 import { isSessionConfigured, readGitHubSession } from "@/lib/github-session";
 
 export const metadata: Metadata = {
@@ -17,6 +18,12 @@ const errors: Record<string, string> = {
   invalid: "GitHub rejected that token. Check the value and its expiration.",
   config:
     "Token sessions are not configured on this server. Add HUBTOPUS_SESSION_SECRET first.",
+  "github-app-config": "GitHub App sign-in is not configured on this server.",
+  "github-app-denied": "GitHub authorization was cancelled or denied.",
+  "github-app-state":
+    "The GitHub authorization request expired or could not be verified.",
+  "github-app-exchange":
+    "GitHub could not complete authorization. Please try again.",
 };
 
 export default async function ConnectPage({
@@ -28,6 +35,7 @@ export default async function ConnectPage({
 
   const { error } = await searchParams;
   const configured = isSessionConfigured();
+  const githubAppConfigured = configured && isGitHubAppConfigured();
   const message = error ? errors[error] : null;
 
   return (
@@ -43,10 +51,34 @@ export default async function ConnectPage({
           </p>
           <h1 className="mt-2 text-3xl font-semibold">Connect GitHub</h1>
           <p className="text-muted-foreground mt-3 text-sm leading-6">
-            Use a read-only token to include work and repositories that are
-            visible only to your account.
+            {githubAppConfigured
+              ? "Authorize the Hubtopus GitHub App to open your private, read-only workspace."
+              : "Use a read-only token to include work and repositories that are visible only to your account."}
           </p>
         </div>
+
+        {githubAppConfigured ? (
+          <Button size="lg" className="h-11 w-full" asChild>
+            <Link href="/api/auth/github/start">
+              <LogIn aria-hidden="true" />
+              Continue with GitHub
+            </Link>
+          </Button>
+        ) : null}
+
+        {message ? (
+          <p className="text-destructive mt-4 text-sm" role="alert">
+            {message}
+          </p>
+        ) : null}
+
+        {githubAppConfigured ? (
+          <div className="text-muted-foreground my-6 flex items-center gap-3 text-xs">
+            <span className="bg-border h-px flex-1" />
+            Personal token fallback
+            <span className="bg-border h-px flex-1" />
+          </div>
+        ) : null}
 
         <form
           action="/api/session"
@@ -76,12 +108,6 @@ export default async function ConnectPage({
             The token is validated by GitHub, encrypted into an HttpOnly session
             cookie, and never exposed to client-side JavaScript.
           </p>
-
-          {message ? (
-            <p className="text-destructive mt-4 text-sm" role="alert">
-              {message}
-            </p>
-          ) : null}
 
           <Button
             type="submit"

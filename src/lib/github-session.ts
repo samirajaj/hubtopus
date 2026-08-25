@@ -13,6 +13,7 @@ const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
 const sessionSchema = z.object({
   token: z.string().min(20).max(512),
   login: z.string().min(1).max(39),
+  method: z.enum(["personal-token", "github-app"]).default("personal-token"),
   expiresAt: z.number().int().positive(),
 });
 
@@ -24,13 +25,13 @@ export function getSessionCookieName(): string {
     : "hubtopus-session";
 }
 
-export function getSessionCookieOptions() {
+export function getSessionCookieOptions(maxAge = SESSION_DURATION_SECONDS) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/",
-    maxAge: SESSION_DURATION_SECONDS,
+    maxAge,
     priority: "high" as const,
   };
 }
@@ -51,11 +52,23 @@ export async function readGitHubSession(): Promise<GitHubSession | null> {
   }
 }
 
-export function createGitHubSession(token: string, login: string): string {
+export function createGitHubSession(
+  token: string,
+  login: string,
+  options: {
+    method?: GitHubSession["method"];
+    maxAge?: number;
+  } = {},
+): string {
+  const maxAge = Math.min(
+    options.maxAge ?? SESSION_DURATION_SECONDS,
+    SESSION_DURATION_SECONDS,
+  );
   const session: GitHubSession = {
     token,
     login,
-    expiresAt: Date.now() + SESSION_DURATION_SECONDS * 1000,
+    method: options.method ?? "personal-token",
+    expiresAt: Date.now() + maxAge * 1000,
   };
   return encrypt(session);
 }

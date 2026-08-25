@@ -7,9 +7,9 @@ import {
   getSessionCookieOptions,
   isSessionConfigured,
 } from "@/lib/github-session";
+import { validateGitHubToken } from "@/lib/github-auth";
 
 const tokenSchema = z.string().trim().min(20).max(512);
-const userSchema = z.object({ login: z.string().min(1).max(39) });
 
 export const runtime = "nodejs";
 
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   const result = tokenSchema.safeParse(formData.get("token"));
   if (!result.success) return redirectWithError(request, "invalid");
 
-  const login = await validateToken(result.data);
+  const login = await validateGitHubToken(result.data);
   if (!login) return redirectWithError(request, "invalid");
 
   const response = NextResponse.redirect(
@@ -73,24 +73,4 @@ function redirectWithError(request: NextRequest, error: string) {
   const url = new URL("/connect", request.url);
   url.searchParams.set("error", error);
   return NextResponse.redirect(url, 303);
-}
-
-async function validateToken(token: string): Promise<string | null> {
-  try {
-    const response = await fetch("https://api.github.com/user", {
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${token}`,
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "Hubtopus",
-      },
-      cache: "no-store",
-    });
-    if (!response.ok) return null;
-
-    const result = userSchema.safeParse(await response.json());
-    return result.success ? result.data.login : null;
-  } catch {
-    return null;
-  }
 }
