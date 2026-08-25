@@ -10,13 +10,15 @@ import {
   Star,
 } from "lucide-react";
 
+import { BriefActions } from "@/components/brief-actions";
 import { LanguageBreakdown } from "@/components/language-breakdown";
+import { PortfolioBrief } from "@/components/portfolio-brief";
 import { RepositoryBrowser } from "@/components/repository-browser";
 import { Badge } from "@/components/ui/badge";
 import type { DeveloperData, Repository } from "@/lib/github";
 
 export function DeveloperDashboard({ data }: { data: DeveloperData }) {
-  const { profile, repositories, activity } = data;
+  const { profile, repositories } = data;
   const sourceRepositories = repositories.filter(
     (repository) => !repository.isFork,
   );
@@ -101,14 +103,18 @@ export function DeveloperDashboard({ data }: { data: DeveloperData }) {
             </div>
           </div>
         </div>
-        <a
-          href={profile.profileUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="bg-background hover:bg-muted focus-visible:ring-ring inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          View on GitHub <ArrowUpRight className="size-4" aria-hidden="true" />
-        </a>
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          <BriefActions username={profile.login} />
+          <a
+            href={profile.profileUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="bg-background hover:bg-muted focus-visible:ring-ring inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            View on GitHub{" "}
+            <ArrowUpRight className="size-4" aria-hidden="true" />
+          </a>
+        </div>
       </section>
 
       <dl className="my-8 grid grid-cols-2 border-y sm:grid-cols-4">
@@ -117,6 +123,8 @@ export function DeveloperDashboard({ data }: { data: DeveloperData }) {
         <Metric label="Following" value={profile.following} />
         <Metric label="Stars received" value={totalStars} />
       </dl>
+
+      <PortfolioBrief data={data} />
 
       {repositories.length ? (
         <>
@@ -133,7 +141,7 @@ export function DeveloperDashboard({ data }: { data: DeveloperData }) {
                 </p>
               </div>
               <div className="text-muted-foreground hidden text-sm sm:block">
-                {sourceRepositories.length.toLocaleString()} source ·{" "}
+                {sourceRepositories.length.toLocaleString()} source -{" "}
                 {totalForks.toLocaleString()} forks received
               </div>
             </div>
@@ -181,9 +189,9 @@ export function DeveloperDashboard({ data }: { data: DeveloperData }) {
             A limited view of recent public events made available by GitHub
           </p>
         </div>
-        {activity.length ? (
+        {data.activity.status === "ready" && data.activity.data.length ? (
           <ol className="divide-y border-y">
-            {activity.slice(0, 12).map((item) => (
+            {data.activity.data.slice(0, 12).map((item) => (
               <li
                 key={item.id}
                 className="grid gap-1 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4"
@@ -208,8 +216,16 @@ export function DeveloperDashboard({ data }: { data: DeveloperData }) {
               </li>
             ))}
           </ol>
-        ) : (
+        ) : data.activity.status === "ready" ? (
           <EmptyState text="GitHub did not return any recent supported public activity for this developer." />
+        ) : (
+          <EmptyState
+            text={
+              data.activity.status === "rate-limit"
+                ? "GitHub's rate limit prevented loading recent activity."
+                : "GitHub could not provide recent activity right now."
+            }
+          />
         )}
       </section>
     </main>

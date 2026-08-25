@@ -4,6 +4,7 @@ import { z } from "zod";
 
 const API_ROOT = "https://api.github.com";
 const REVALIDATE_SECONDS = 900;
+const REPOSITORY_ANALYSIS_LIMIT = 3;
 
 const userSchema = z.object({
   login: z.string(),
@@ -32,7 +33,11 @@ const repositorySchema = z.object({
   open_issues_count: z.number().int().nonnegative(),
   fork: z.boolean(),
   archived: z.boolean(),
+  topics: z.array(z.string()).optional().default([]),
+  default_branch: z.string(),
+  created_at: z.string(),
   updated_at: z.string(),
+  pushed_at: z.string().nullable(),
 });
 
 const eventSchema = z.object({
@@ -41,6 +46,58 @@ const eventSchema = z.object({
   created_at: z.string().nullable(),
   repo: z.object({ name: z.string() }),
   payload: z.record(z.string(), z.unknown()),
+});
+
+const organizationSchema = z.object({
+  id: z.number(),
+  login: z.string(),
+  avatar_url: z.url(),
+  html_url: z.url(),
+  description: z.string().nullable(),
+});
+
+const contributionSearchSchema = z.object({
+  total_count: z.number().int().nonnegative(),
+  items: z.array(
+    z.object({
+      id: z.number(),
+      number: z.number().int().positive(),
+      title: z.string(),
+      html_url: z.url(),
+      repository_url: z.url(),
+      state: z.string(),
+      created_at: z.string(),
+      updated_at: z.string(),
+      comments: z.number().int().nonnegative(),
+      pull_request: z
+        .object({
+          merged_at: z.string().nullable().optional(),
+        })
+        .passthrough(),
+    }),
+  ),
+});
+
+const communityProfileSchema = z.object({
+  health_percentage: z.number().min(0).max(100),
+  files: z.object({
+    code_of_conduct: z.unknown().nullable().optional(),
+    contributing: z.unknown().nullable().optional(),
+    issue_template: z.unknown().nullable().optional(),
+    pull_request_template: z.unknown().nullable().optional(),
+    readme: z.unknown().nullable().optional(),
+    license: z.unknown().nullable().optional(),
+  }),
+});
+
+const releaseSchema = z.object({
+  id: z.number(),
+  tag_name: z.string(),
+  name: z.string().nullable(),
+  html_url: z.url(),
+  published_at: z.string().nullable(),
+  draft: z.boolean(),
+  prerelease: z.boolean(),
 });
 
 export type DeveloperProfile = {
@@ -70,7 +127,11 @@ export type Repository = {
   openIssues: number;
   isFork: boolean;
   isArchived: boolean;
+  topics: string[];
+  defaultBranch: string;
+  createdAt: string;
   updatedAt: string;
+  pushedAt: string | null;
 };
 
 export type ActivityItem = {
@@ -82,10 +143,73 @@ export type ActivityItem = {
   createdAt: string;
 };
 
-export type DeveloperData = {
+export type Organization = {
+  id: number;
+  login: string;
+  avatarUrl: string;
+  url: string;
+  description: string | null;
+};
+
+export type ExternalContribution = {
+  id: number;
+  number: number;
+  title: string;
+  url: string;
+  repository: string;
+  state: "open" | "closed" | "merged";
+  comments: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RepositoryHealth = {
+  score: number;
+  hasReadme: boolean;
+  hasLicense: boolean;
+  hasContributingGuide: boolean;
+  hasCodeOfConduct: boolean;
+  hasIssueTemplate: boolean;
+  hasPullRequestTemplate: boolean;
+};
+
+export type RepositoryRelease = {
+  id: number;
+  tagName: string;
+  name: string | null;
+  url: string;
+  publishedAt: string | null;
+  isPrerelease: boolean;
+};
+
+export type OptionalDataStatus = "ready" | "rate-limit" | "unavailable";
+
+export type OptionalData<T> = {
+  status: OptionalDataStatus;
+  data: T;
+};
+
+export type RepositoryInsight = {
+  repositoryId: number;
+  health: OptionalData<RepositoryHealth | null>;
+  latestRelease: OptionalData<RepositoryRelease | null>;
+};
+
+export type DeveloperSummary = {
+  analyzedAt: string;
   profile: DeveloperProfile;
   repositories: Repository[];
-  activity: ActivityItem[];
+};
+
+export type DeveloperData = DeveloperSummary & {
+  activity: OptionalData<ActivityItem[]>;
+  organizations: OptionalData<Organization[]>;
+  recentStars: OptionalData<Repository[]>;
+  externalContributions: OptionalData<{
+    totalCount: number;
+    items: ExternalContribution[];
+  }>;
+  repositoryInsights: RepositoryInsight[];
 };
 
 export type GitHubErrorKind = "not-found" | "rate-limit" | "unavailable";
@@ -101,9 +225,9 @@ export class GitHubApiError extends Error {
   }
 }
 
-function githubHeaders(): HeadersInit {
+function githubHeaders(accept = "application/vnd.github+json"): HeadersInit {
   const headers: Record<string, string> = {
-    Accept: "application/vnd.github+json",
+    Accept: accept,
     "X-GitHub-Api-Version": "2022-11-28",
     "User-Agent": "Hubtopus",
   };
@@ -115,12 +239,15 @@ function githubHeaders(): HeadersInit {
   return headers;
 }
 
-async function githubRequest(path: string): Promise<unknown> {
+async function githubRequest(
+  path: string,
+  options: { allowNotFound?: boolean; accept?: string } = {},
+): Promise<unknown | null> {
   let response: Response;
 
   try {
     response = await fetch(`${API_ROOT}${path}`, {
-      headers: githubHeaders(),
+      headers: githubHeaders(options.accept),
       next: { revalidate: REVALIDATE_SECONDS },
     });
   } catch {
@@ -130,7 +257,10 @@ async function githubRequest(path: string): Promise<unknown> {
     );
   }
 
-  if (response.ok) return response.json();
+  if (response.ok) {
+    if (response.status === 204) return null;
+    return response.json();
+  }
 
   const remaining = response.headers.get("x-ratelimit-remaining");
   const retryAfter = response.headers.get("retry-after");
@@ -151,6 +281,7 @@ async function githubRequest(path: string): Promise<unknown> {
     );
   }
 
+  if (response.status === 404 && options.allowNotFound) return null;
   if (response.status === 404) {
     throw new GitHubApiError("not-found", "That GitHub user was not found.");
   }
@@ -158,6 +289,20 @@ async function githubRequest(path: string): Promise<unknown> {
   throw new GitHubApiError(
     "unavailable",
     `GitHub returned an unexpected ${response.status} response.`,
+  );
+}
+
+function parseExternal<T>(
+  schema: z.ZodType<T>,
+  value: unknown,
+  description: string,
+): T {
+  const result = schema.safeParse(value);
+  if (result.success) return result.data;
+
+  throw new GitHubApiError(
+    "unavailable",
+    `GitHub returned ${description} in an unexpected format.`,
   );
 }
 
@@ -176,6 +321,23 @@ function normalizeWebsite(value: string): string | null {
   }
 }
 
+function transformProfile(user: z.infer<typeof userSchema>): DeveloperProfile {
+  return {
+    login: user.login,
+    name: user.name,
+    avatarUrl: user.avatar_url,
+    profileUrl: user.html_url,
+    bio: user.bio,
+    company: user.company,
+    location: user.location,
+    website: normalizeWebsite(user.blog),
+    publicRepositories: user.public_repos,
+    followers: user.followers,
+    following: user.following,
+    createdAt: user.created_at,
+  };
+}
+
 function transformRepository(
   repository: z.infer<typeof repositorySchema>,
 ): Repository {
@@ -191,7 +353,11 @@ function transformRepository(
     openIssues: repository.open_issues_count,
     isFork: repository.fork,
     isArchived: repository.archived,
+    topics: repository.topics,
+    defaultBranch: repository.default_branch,
+    createdAt: repository.created_at,
     updatedAt: repository.updated_at,
+    pushedAt: repository.pushed_at,
   };
 }
 
@@ -259,42 +425,209 @@ function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+async function fetchProfile(username: string): Promise<DeveloperProfile> {
+  const rawUser = await githubRequest(`/users/${encodeURIComponent(username)}`);
+  const user = parseExternal(userSchema, rawUser, "profile data");
+  return transformProfile(user);
+}
+
+async function fetchRepositories(
+  profile: DeveloperProfile,
+): Promise<Repository[]> {
+  const pageCount = Math.ceil(profile.publicRepositories / 100);
+  const rawPages = await fetchRepositoryPages(profile.login, pageCount);
+  const repositories = parseExternal(
+    z.array(repositorySchema),
+    rawPages.flat(),
+    "repository data",
+  );
+  return repositories.map(transformRepository);
+}
+
+export async function getDeveloperSummary(
+  username: string,
+): Promise<DeveloperSummary> {
+  const profile = await fetchProfile(username);
+  const repositories = await fetchRepositories(profile);
+  return { analyzedAt: new Date().toISOString(), profile, repositories };
+}
+
 export async function getDeveloperData(
   username: string,
 ): Promise<DeveloperData> {
-  const rawUser = await githubRequest(`/users/${encodeURIComponent(username)}`);
-  const user = userSchema.safeParse(rawUser);
-
-  if (!user.success) {
-    throw new GitHubApiError(
-      "unavailable",
-      "GitHub returned profile data in an unexpected format.",
+  const profile = await fetchProfile(username);
+  const encodedUsername = encodeURIComponent(profile.login);
+  const repositoriesPromise = fetchRepositories(profile);
+  const activityPromise = loadOptional(async () => {
+    const raw = await githubRequest(
+      `/users/${encodedUsername}/events/public?per_page=30`,
     );
-  }
+    return transformEvents(
+      parseExternal(z.array(eventSchema), raw, "event data"),
+    );
+  }, []);
+  const organizationsPromise = loadOptional(async () => {
+    const raw = await githubRequest(
+      `/users/${encodedUsername}/orgs?per_page=100`,
+    );
+    return parseExternal(
+      z.array(organizationSchema),
+      raw,
+      "organization data",
+    ).map((organization) => ({
+      id: organization.id,
+      login: organization.login,
+      avatarUrl: organization.avatar_url,
+      url: organization.html_url,
+      description: organization.description,
+    }));
+  }, []);
+  const starsPromise = loadOptional(async () => {
+    const raw = await githubRequest(
+      `/users/${encodedUsername}/starred?sort=created&direction=desc&per_page=100`,
+    );
+    return parseExternal(
+      z.array(repositorySchema),
+      raw,
+      "starred repository data",
+    ).map(transformRepository);
+  }, []);
+  const contributionsPromise = loadOptional(
+    () => fetchExternalContributions(profile.login),
+    { totalCount: 0, items: [] },
+  );
 
-  const pageCount = Math.ceil(user.data.public_repos / 100);
-
-  const [rawRepositoryPages, rawEvents] = await Promise.all([
-    fetchRepositoryPages(user.data.login, pageCount),
-    githubRequest(
-      `/users/${encodeURIComponent(user.data.login)}/events/public?per_page=30`,
-    ),
+  const [
+    repositories,
+    activity,
+    organizations,
+    recentStars,
+    externalContributions,
+  ] = await Promise.all([
+    repositoriesPromise,
+    activityPromise,
+    organizationsPromise,
+    starsPromise,
+    contributionsPromise,
   ]);
 
-  const repositoriesResult = z
-    .array(repositorySchema)
-    .safeParse(rawRepositoryPages.flat());
-  const eventsResult = z.array(eventSchema).safeParse(rawEvents);
+  const sourceRepositories = [...repositories]
+    .filter((repository) => !repository.isFork && !repository.isArchived)
+    .sort(
+      (left, right) =>
+        right.stars - left.stars ||
+        right.forks - left.forks ||
+        dateValue(right.pushedAt ?? right.updatedAt) -
+          dateValue(left.pushedAt ?? left.updatedAt),
+    )
+    .slice(0, REPOSITORY_ANALYSIS_LIMIT);
 
-  if (!repositoriesResult.success || !eventsResult.success) {
-    throw new GitHubApiError(
-      "unavailable",
-      "GitHub returned activity data in an unexpected format.",
-    );
-  }
+  const repositoryInsights = await Promise.all(
+    sourceRepositories.map(fetchRepositoryInsight),
+  );
 
-  const repositories = repositoriesResult.data.map(transformRepository);
-  const activity = eventsResult.data.flatMap((event): ActivityItem[] => {
+  return {
+    analyzedAt: new Date().toISOString(),
+    profile,
+    repositories,
+    activity,
+    organizations,
+    recentStars,
+    externalContributions,
+    repositoryInsights,
+  };
+}
+
+async function fetchExternalContributions(
+  username: string,
+): Promise<{ totalCount: number; items: ExternalContribution[] }> {
+  const query = encodeURIComponent(
+    `author:${username} type:pr is:public -user:${username}`,
+  );
+  const raw = await githubRequest(
+    `/search/issues?q=${query}&sort=updated&order=desc&per_page=30`,
+  );
+  const result = parseExternal(
+    contributionSearchSchema,
+    raw,
+    "pull request search data",
+  );
+
+  return {
+    totalCount: result.total_count,
+    items: result.items.map((item) => {
+      const repository = new URL(item.repository_url).pathname
+        .replace(/^\/repos\//, "")
+        .replace(/^\//, "");
+      const mergedAt = item.pull_request.merged_at ?? null;
+      return {
+        id: item.id,
+        number: item.number,
+        title: item.title,
+        url: item.html_url,
+        repository,
+        state: mergedAt ? "merged" : item.state === "open" ? "open" : "closed",
+        comments: item.comments,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      };
+    }),
+  };
+}
+
+async function fetchRepositoryInsight(
+  repository: Repository,
+): Promise<RepositoryInsight> {
+  const path = `/repos/${repository.fullName}`;
+  const [health, latestRelease] = await Promise.all([
+    loadOptional(async () => {
+      const raw = await githubRequest(`${path}/community/profile`, {
+        allowNotFound: true,
+      });
+      if (raw === null) return null;
+      const profile = parseExternal(
+        communityProfileSchema,
+        raw,
+        "community profile data",
+      );
+      return {
+        score: profile.health_percentage,
+        hasReadme: Boolean(profile.files.readme),
+        hasLicense: Boolean(profile.files.license),
+        hasContributingGuide: Boolean(profile.files.contributing),
+        hasCodeOfConduct: Boolean(profile.files.code_of_conduct),
+        hasIssueTemplate: Boolean(profile.files.issue_template),
+        hasPullRequestTemplate: Boolean(profile.files.pull_request_template),
+      };
+    }, null),
+    loadOptional(async () => {
+      const raw = await githubRequest(`${path}/releases/latest`, {
+        allowNotFound: true,
+      });
+      if (raw === null) return null;
+      const release = parseExternal(releaseSchema, raw, "release data");
+      return {
+        id: release.id,
+        tagName: release.tag_name,
+        name: release.name,
+        url: release.html_url,
+        publishedAt: release.published_at,
+        isPrerelease: release.prerelease,
+      };
+    }, null),
+  ]);
+
+  return {
+    repositoryId: repository.id,
+    health,
+    latestRelease,
+  };
+}
+
+function transformEvents(
+  events: z.infer<typeof eventSchema>[],
+): ActivityItem[] {
+  return events.flatMap((event): ActivityItem[] => {
     const description = describeEvent(event);
     if (!description || !event.created_at) return [];
 
@@ -309,25 +642,23 @@ export async function getDeveloperData(
       },
     ];
   });
+}
 
-  return {
-    profile: {
-      login: user.data.login,
-      name: user.data.name,
-      avatarUrl: user.data.avatar_url,
-      profileUrl: user.data.html_url,
-      bio: user.data.bio,
-      company: user.data.company,
-      location: user.data.location,
-      website: normalizeWebsite(user.data.blog),
-      publicRepositories: user.data.public_repos,
-      followers: user.data.followers,
-      following: user.data.following,
-      createdAt: user.data.created_at,
-    },
-    repositories,
-    activity,
-  };
+async function loadOptional<T>(
+  loader: () => Promise<T>,
+  fallback: T,
+): Promise<OptionalData<T>> {
+  try {
+    return { status: "ready", data: await loader() };
+  } catch (error) {
+    return {
+      status:
+        error instanceof GitHubApiError && error.kind === "rate-limit"
+          ? "rate-limit"
+          : "unavailable",
+      data: fallback,
+    };
+  }
 }
 
 async function fetchRepositoryPages(
@@ -349,4 +680,8 @@ async function fetchRepositoryPages(
   }
 
   return pages;
+}
+
+function dateValue(value: string): number {
+  return new Date(value).getTime();
 }

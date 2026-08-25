@@ -17,8 +17,9 @@ export default function Home() {
               Explore GitHub developers
             </h1>
             <p className="text-muted-foreground mx-auto mt-5 max-w-2xl text-base leading-7 sm:text-lg">
-              Search a GitHub username to explore their public profile,
-              repositories, languages, stars, and recent activity.
+              Search a GitHub username for a clear portfolio brief covering
+              original work, project health, external contributions, and recent
+              activity.
             </p>
             <DeveloperSearch className="mx-auto mt-8 max-w-2xl text-left" />
             <p className="text-muted-foreground mt-3 text-xs">

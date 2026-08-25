@@ -6,15 +6,16 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
   title: {
-    default: "Hubtopus — Explore GitHub Developers",
+    default: "Hubtopus - Explore GitHub Developers",
     template: "%s",
   },
   description:
-    "Search GitHub developers and explore their public profiles, repositories, languages, stars, and recent activity.",
+    "Build clear, factual portfolio briefs from public GitHub profiles, repositories, project health, and external contributions.",
   applicationName: "Hubtopus",
   openGraph: {
-    title: "Hubtopus — Explore GitHub Developers",
-    description: "Turn public GitHub activity into a clear developer profile.",
+    title: "Hubtopus - Explore GitHub Developers",
+    description:
+      "Turn public GitHub work into a clear, factual developer brief.",
     type: "website",
     siteName: "Hubtopus",
     images: [
@@ -28,8 +29,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Hubtopus — Explore GitHub Developers",
-    description: "Turn public GitHub activity into a clear developer profile.",
+    title: "Hubtopus - Explore GitHub Developers",
+    description:
+      "Turn public GitHub work into a clear, factual developer brief.",
     images: ["/og.png"],
   },
 };

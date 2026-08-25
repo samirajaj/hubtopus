@@ -138,3 +138,35 @@
 ::selection {
   background: color-mix(in oklch, var(--primary) 28%, transparent);
 }
+
+@media print {
+  :root,
+  .dark {
+    --background: white;
+    --foreground: black;
+    --card: white;
+    --card-foreground: black;
+    --muted: #f3f4f6;
+    --muted-foreground: #4b5563;
+    --border: #d1d5db;
+  }
+
+  .print-hidden {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  section,
+  article {
+    break-inside: avoid;
+  }
+}
