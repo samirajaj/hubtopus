@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hubtopus
 
-## Getting Started
+Hubtopus is a focused GitHub developer explorer. Search for a GitHub username or profile URL to see a clear dashboard built from that developer's real public GitHub data.
 
-First, run the development server:
+## Features
+
+- Shareable developer pages at `/developers/[username]`
+- Accurate profile, repository, follower, following, star, and fork totals
+- Complete repository pagination through the GitHub REST API
+- Primary-language distribution across source repositories
+- Notable source repositories and a searchable, sortable repository browser
+- Human-readable recent public activity
+- Explicit not-found, rate-limit, empty, loading, and unexpected-error states
+- Responsive light and dark themes
+
+## Technology
+
+Hubtopus uses Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui primitives, Lucide icons, Zod, and the GitHub REST API.
+
+## Local development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## GitHub token (optional)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The application works without credentials, but unauthenticated GitHub API requests have a low hourly rate limit. To increase it, create `.env.local` and add a GitHub token:
 
-## Learn More
+```dotenv
+GITHUB_TOKEN=your_token_here
+SITE_URL=https://your-production-domain.example
+```
 
-To learn more about Next.js, take a look at the following resources:
+The token is read only on the server. Never prefix it with `NEXT_PUBLIC_` or commit `.env.local`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+GitHub responses are cached for 15 minutes to reduce duplicate requests. Errors are surfaced as product states rather than treated as successful cached data.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Production checks
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run build
+npm start
+```

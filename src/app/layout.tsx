@@ -1,23 +1,37 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Hubtopus",
+  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
+  title: {
+    default: "Hubtopus — Explore GitHub Developers",
+    template: "%s",
+  },
   description:
-    "Next.js project utilizing GitHub REST API endpoints to fetch and display developer data.",
+    "Search GitHub developers and explore their public profiles, repositories, languages, stars, and recent activity.",
+  applicationName: "Hubtopus",
+  openGraph: {
+    title: "Hubtopus — Explore GitHub Developers",
+    description: "Turn public GitHub activity into a clear developer profile.",
+    type: "website",
+    siteName: "Hubtopus",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Hubtopus developer explorer dashboard",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Hubtopus — Explore GitHub Developers",
+    description: "Turn public GitHub activity into a clear developer profile.",
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({
@@ -26,11 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" suppressHydrationWarning className="h-full antialiased">
       <body className="flex min-h-full flex-col">
         <ThemeProvider
           attribute="class"
