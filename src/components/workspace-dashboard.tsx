@@ -61,6 +61,12 @@ export function WorkspaceDashboard({ data }: { data: WorkspaceData }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="lg" asChild>
+            <Link href="/workspace/health">
+              <ShieldCheck aria-hidden="true" />
+              Health center
+            </Link>
+          </Button>
+          <Button variant="outline" size="lg" asChild>
             <Link href={`/developers/${encodeURIComponent(data.user.login)}`}>
               Public brief
               <ArrowUpRight aria-hidden="true" />

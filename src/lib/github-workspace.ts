@@ -32,6 +32,7 @@ const workspaceRepositorySchema = z.object({
   open_issues_count: z.number().int().nonnegative(),
   has_issues: z.boolean(),
   topics: z.array(z.string()).optional().default([]),
+  default_branch: z.string(),
   license: z.object({ spdx_id: z.string().nullable() }).nullable(),
   pushed_at: z.string().nullable(),
   updated_at: z.string(),
@@ -113,6 +114,7 @@ export type WorkspaceRepository = {
   openIssues: number;
   hasIssuesEnabled: boolean;
   topics: string[];
+  defaultBranch: string;
   license: string | null;
   pushedAt: string | null;
   updatedAt: string;
@@ -172,17 +174,19 @@ export type WorkspaceData = {
   workflowFailures: OptionalData<WorkflowFailure[]>;
 };
 
-export async function getWorkspaceData(): Promise<WorkspaceData | null> {
-  const session = await readGitHubSession();
-  if (!session) return null;
+export type RepositoryHealthCenterData = {
+  analyzedAt: string;
+  user: AuthenticatedUser;
+  repositories: WorkspaceRepository[];
+  repositoriesTruncated: boolean;
+  workflowFailures: OptionalData<WorkflowFailure[]>;
+  workflowInspectionLimit: number;
+};
 
-  const rawUser = await authenticatedRequest(session.token, "/user");
-  const user = parseExternal(
-    authenticatedUserSchema,
-    rawUser,
-    "authenticated user data",
-  );
-  if (user.login.toLowerCase() !== session.login.toLowerCase()) return null;
+export async function getWorkspaceData(): Promise<WorkspaceData | null> {
+  const context = await loadAuthenticatedContext();
+  if (!context) return null;
+  const { session, user } = context;
 
   const repositoriesPromise = fetchRepositories(session.token);
   const assignedIssuesPromise = loadOptional(
@@ -246,6 +250,49 @@ export async function getWorkspaceData(): Promise<WorkspaceData | null> {
     notifications,
     workflowFailures,
   };
+}
+
+export async function getRepositoryHealthCenterData(): Promise<RepositoryHealthCenterData | null> {
+  const context = await loadAuthenticatedContext();
+  if (!context) return null;
+
+  const repositoryResult = await fetchRepositories(context.session.token);
+  const workflowFailures = await loadOptional(
+    () =>
+      fetchWorkflowFailures(
+        context.session.token,
+        repositoryResult.repositories,
+      ),
+    [],
+  );
+
+  return {
+    analyzedAt: new Date().toISOString(),
+    user: {
+      login: context.user.login,
+      name: context.user.name,
+      avatarUrl: context.user.avatar_url,
+      profileUrl: context.user.html_url,
+    },
+    repositories: repositoryResult.repositories,
+    repositoriesTruncated: repositoryResult.truncated,
+    workflowFailures,
+    workflowInspectionLimit: WORKFLOW_REPOSITORY_LIMIT,
+  };
+}
+
+async function loadAuthenticatedContext() {
+  const session = await readGitHubSession();
+  if (!session) return null;
+
+  const rawUser = await authenticatedRequest(session.token, "/user");
+  const user = parseExternal(
+    authenticatedUserSchema,
+    rawUser,
+    "authenticated user data",
+  );
+  if (user.login.toLowerCase() !== session.login.toLowerCase()) return null;
+  return { session, user };
 }
 
 async function authenticatedRequest(token: string, path: string) {
@@ -329,6 +376,7 @@ async function fetchRepositories(token: string): Promise<{
       openIssues: repository.open_issues_count,
       hasIssuesEnabled: repository.has_issues,
       topics: repository.topics,
+      defaultBranch: repository.default_branch,
       license: repository.license?.spdx_id ?? null,
       pushedAt: repository.pushed_at,
       updatedAt: repository.updated_at,
