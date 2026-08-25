@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GitCompareArrows } from "lucide-react";
+import { GitCompareArrows, PanelsTopLeft } from "lucide-react";
 
 import { Brand } from "@/components/brand";
 import { DeveloperSearch } from "@/components/developer-search";
@@ -19,6 +19,15 @@ export function AppHeader({ username }: { username?: string }) {
         ) : (
           <div className="flex-1" />
         )}
+        <Link
+          href="/workspace"
+          className="hover:bg-muted focus-visible:ring-ring inline-flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none md:w-auto md:gap-2 md:px-2.5"
+          aria-label="Private workspace"
+          title="Private workspace"
+        >
+          <PanelsTopLeft className="size-4" aria-hidden="true" />
+          <span className="hidden md:inline">Workspace</span>
+        </Link>
         <Link
           href="/compare"
           className="hover:bg-muted focus-visible:ring-ring inline-flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none md:w-auto md:gap-2 md:px-2.5"
