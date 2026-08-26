@@ -1,4 +1,4 @@
-import { ArrowDown, Code2, GitFork, Star } from "lucide-react";
+import { Code2, GitFork, Star } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
 import { DeveloperSearch } from "@/components/developer-search";
@@ -36,10 +36,6 @@ export default function Home() {
             <LandingSignal icon={GitFork} label="Repositories" />
           </div>
         </section>
-        <div className="text-muted-foreground mx-auto flex w-full max-w-7xl items-center justify-between px-4 pb-6 text-xs sm:px-6 lg:px-8">
-          <span>Public GitHub data, clearly organized.</span>
-          <ArrowDown className="size-4" aria-hidden="true" />
-        </div>
       </main>
     </div>
   );

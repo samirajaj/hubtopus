@@ -1,5 +1,5 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Network } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -12,9 +12,13 @@ export function Brand({ className }: { className?: string }) {
         className,
       )}
     >
-      <span className="bg-foreground text-background flex size-8 items-center justify-center rounded-md">
-        <Network className="size-4" aria-hidden="true" />
-      </span>
+      <Image
+        src="/logo-mark.png"
+        alt=""
+        width={36}
+        height={36}
+        className="size-9 shrink-0 object-contain"
+      />
       <span>Hubtopus</span>
     </Link>
   );

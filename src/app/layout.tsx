@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AppFooter } from "@/components/app-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -6,16 +7,16 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
   title: {
-    default: "Hubtopus - Explore GitHub Developers",
+    default: "Hubtopus - GitHub Developer and Repository Intelligence",
     template: "%s",
   },
   description:
-    "Build clear, factual portfolio briefs from public GitHub profiles, repositories, project health, and external contributions.",
+    "Explore public developer work and privately review repositories, work queues, and maintenance signals.",
   applicationName: "Hubtopus",
   openGraph: {
-    title: "Hubtopus - Explore GitHub Developers",
+    title: "Hubtopus - GitHub Developer and Repository Intelligence",
     description:
-      "Turn public GitHub work into a clear, factual developer brief.",
+      "Explore developer work and privately review repository health in one focused workspace.",
     type: "website",
     siteName: "Hubtopus",
     images: [
@@ -23,15 +24,15 @@ export const metadata: Metadata = {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "Hubtopus developer explorer dashboard",
+        alt: "Hubtopus GitHub workspace and developer explorer",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Hubtopus - Explore GitHub Developers",
+    title: "Hubtopus - GitHub Developer and Repository Intelligence",
     description:
-      "Turn public GitHub work into a clear, factual developer brief.",
+      "Explore developer work and privately review repository health in one focused workspace.",
     images: ["/og.png"],
   },
 };
@@ -51,6 +52,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <AppFooter />
           <Toaster />
         </ThemeProvider>
       </body>
