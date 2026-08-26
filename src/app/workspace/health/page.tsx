@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
-import { AppHeader } from "@/components/app-header";
-import { RepositoryHealthCenter } from "@/components/repository-health-center";
+import { AppHeader } from "@/components/app/app-header";
+import { RepositoryHealthCenter } from "@/features/repository-health/components/health-center";
 import { GitHubApiError } from "@/lib/github/errors";
-import { getRepositoryHealthCenterData } from "@/lib/github-workspace";
+import { getRepositoryHealthCenterData } from "@/features/workspace/server/workspace-service";
 
 export const dynamic = "force-dynamic";
 

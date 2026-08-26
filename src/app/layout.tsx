@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { AppFooter } from "@/components/app-footer";
+import { AppFooter } from "@/components/app/app-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { DEFAULT_SITE_URL } from "@/lib/config/public";
+import { getSiteUrl } from "@/lib/config/server";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
+  metadataBase: getSiteUrl() ?? new URL(DEFAULT_SITE_URL),
   title: {
     default: "Hubtopus - GitHub Developer and Repository Intelligence",
     template: "%s",

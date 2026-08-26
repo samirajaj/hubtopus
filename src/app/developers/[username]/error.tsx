@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 
-import { AppHeader } from "@/components/app-header";
+import { AppHeader } from "@/components/app/app-header";
 import { Button } from "@/components/ui/button";
 
 export default function DeveloperError({

@@ -35,10 +35,13 @@ Hubtopus uses Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui primitiv
 ## Project structure
 
 - `src/app` owns routes, metadata, loading states, and server entry points.
-- `src/components` contains page orchestration and reusable UI. Feature-specific workspace and operations components live in named subfolders.
-- `src/lib/github` contains the shared GitHub transport, validation, errors, and optional-result handling.
-- `src/lib/github*.ts` contains public profile, authenticated workspace, and pull request feature logic.
-- `src/lib/repository-*.ts` contains pure health and operations rules, separate from rendering and network access.
+- `src/features` groups developer, workspace, operations, and repository-health code by ownership.
+- Each feature separates components, server access, domain rules, and public DTOs where applicable.
+- `src/components/app` contains cross-feature presentation primitives; `src/components/ui` contains design-system primitives.
+- `src/lib/github` contains normalized GitHub models plus shared transport, inspection, parsing, errors, and remote-result infrastructure.
+- `src/lib/config` is the single server-validated boundary for environment variables.
+
+See [`docs/architecture.md`](docs/architecture.md) for dependency direction and server/client boundary rules.
 
 ## Local development
 
@@ -109,3 +112,5 @@ npm run lint
 npm run build
 npm start
 ```
+
+GitHub Actions runs type checking, linting, and the production build. Automated tests are intentionally deferred for now.
