@@ -2,6 +2,7 @@ import type {
   OperationPriority,
   RepositoryOperation,
 } from "@/features/operations/types";
+import { compareDatesDescending } from "@/lib/date";
 import type { RemoteResultStatus } from "@/lib/github/result";
 
 export function deduplicateOperations(
@@ -51,7 +52,7 @@ export function compareOperations(
   return (
     operationPriorityRank(right.priority) -
       operationPriorityRank(left.priority) ||
-    new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+    compareDatesDescending(left.updatedAt, right.updatedAt)
   );
 }
 

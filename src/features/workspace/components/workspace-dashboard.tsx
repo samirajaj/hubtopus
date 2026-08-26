@@ -8,10 +8,10 @@ import {
 import { SummaryFact } from "@/components/app/summary-fact";
 import { ConnectionStatus } from "@/features/workspace/components/connection-status";
 import {
-  buildMaintenanceItems,
   MaintenanceSection,
   WorkflowSection,
 } from "@/features/workspace/components/maintenance-sections";
+import { buildMaintenanceItems } from "@/features/workspace/domain/maintenance";
 import { RepositoryInventory } from "@/features/workspace/components/repository-inventory";
 import { WorkspaceHeader } from "@/features/workspace/components/workspace-header";
 import {

@@ -3,6 +3,7 @@ import { ArrowUpRight, GitFork, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/features/developer/components/portfolio-states";
 import type { Repository } from "@/features/developer/types";
+import { formatNumber } from "@/lib/number";
 
 export function RepositoryHighlights({
   repositories,
@@ -27,8 +28,8 @@ export function RepositoryHighlights({
           </p>
         </div>
         <div className="text-muted-foreground hidden text-sm sm:block">
-          {repositories.length.toLocaleString()} source -{" "}
-          {totalForks.toLocaleString()} forks received
+          {formatNumber(repositories.length)} source -{" "}
+          {formatNumber(totalForks)} forks received
         </div>
       </div>
       {highlights.length ? (
@@ -73,11 +74,11 @@ function HighlightedRepository({ repository }: { repository: Repository }) {
         ) : null}
         <span className="inline-flex items-center gap-1">
           <Star className="size-3.5" aria-hidden="true" />{" "}
-          {repository.stars.toLocaleString()}
+          {formatNumber(repository.stars)}
         </span>
         <span className="inline-flex items-center gap-1">
           <GitFork className="size-3.5" aria-hidden="true" />{" "}
-          {repository.forks.toLocaleString()}
+          {formatNumber(repository.forks)}
         </span>
       </div>
     </article>

@@ -5,6 +5,8 @@ import {
   OptionalNotice,
 } from "@/features/developer/components/portfolio-states";
 import type { DeveloperData } from "@/features/developer/types";
+import { isWithinDays } from "@/lib/date";
+import { formatNumber } from "@/lib/number";
 
 export function WorkProfile({ data }: { data: DeveloperData }) {
   const sourceRepositories = data.repositories.filter(
@@ -13,10 +15,7 @@ export function WorkProfile({ data }: { data: DeveloperData }) {
   const forks = data.repositories.length - sourceRepositories.length;
   const activeSources = sourceRepositories.filter((repository) => {
     const activityDate = repository.pushedAt ?? repository.updatedAt;
-    return (
-      new Date(data.analyzedAt).getTime() - new Date(activityDate).getTime() <
-      365 * 24 * 60 * 60 * 1000
-    );
+    return isWithinDays(activityDate, data.analyzedAt, 365);
   }).length;
   const totalStars = data.repositories.reduce(
     (sum, repository) => sum + repository.stars,
@@ -54,7 +53,7 @@ export function WorkProfile({ data }: { data: DeveloperData }) {
           label="Active in 12 months"
           value={`${activeSources} source repos`}
         />
-        <BriefFact label="Forks" value={forks.toLocaleString()} />
+        <BriefFact label="Forks" value={formatNumber(forks)} />
         <BriefFact
           label="Impact concentration"
           value={totalStars ? `${concentration}% in top repo` : "No stars yet"}

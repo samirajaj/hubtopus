@@ -1,41 +1,13 @@
-import type { RemoteResult, RemoteResultStatus } from "@/lib/github/result";
+import type { RemoteResultStatus } from "@/lib/github/result";
+import type { PullRequestInsight } from "@/lib/github/models";
 
-export type PullRequestReviewState =
-  | "draft"
-  | "changes-requested"
-  | "waiting-review"
-  | "approved"
-  | "none";
-
-export type PullRequestReviewSummary = {
-  state: PullRequestReviewState;
-  approvals: number;
-  changesRequested: number;
-  requestedReviewers: string[];
-};
-
-export type PullRequestCheckSummary = {
-  total: number;
-  failed: number;
-  pending: number;
-  successful: number;
-  other: number;
-  firstFailureUrl: string | null;
-};
-
-export type PullRequestInsight = {
-  repository: string;
-  number: number;
-  isDraft: boolean;
-  mergeability: "mergeable" | "conflicting" | "unknown";
-  review: RemoteResult<PullRequestReviewSummary>;
-  checks: RemoteResult<PullRequestCheckSummary>;
-};
-
-export type PullRequestTarget = {
-  repository: string;
-  number: number;
-};
+export type {
+  PullRequestCheckSummary,
+  PullRequestInsight,
+  PullRequestReviewState,
+  PullRequestReviewSummary,
+  PullRequestTarget,
+} from "@/lib/github/models";
 
 export type OperationPriority = "high" | "medium" | "low";
 export type OperationKind =

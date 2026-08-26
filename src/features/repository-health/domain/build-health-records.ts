@@ -8,13 +8,12 @@ import type {
   RepositoryFinding,
   RepositoryHealthRecord,
 } from "@/features/repository-health/types";
+import { isAtLeastDaysOld } from "@/lib/date";
 import { remoteDataOr } from "@/lib/github/result";
 
 export function buildRepositoryHealthRecords(
   data: RepositoryHealthCenterData,
 ): RepositoryHealthRecord[] {
-  const referenceTime = new Date(data.analyzedAt).getTime();
-  const staleCutoff = referenceTime - 365 * 24 * 60 * 60 * 1000;
   const workflowFailures = new Map(
     remoteDataOr(data.workflowFailures, []).map((failure) => [
       failure.repository,
@@ -28,7 +27,7 @@ export function buildRepositoryHealthRecords(
       : buildFindings(
           repository,
           workflowFailures.get(repository.fullName),
-          staleCutoff,
+          data.analyzedAt,
         );
     return {
       repository,
@@ -45,7 +44,7 @@ export function buildRepositoryHealthRecords(
 function buildFindings(
   repository: WorkspaceRepository,
   workflowFailure: WorkflowFailure | undefined,
-  staleCutoff: number,
+  analyzedAt: string,
 ): RepositoryFinding[] {
   const findings: RepositoryFinding[] = [];
 
@@ -62,8 +61,11 @@ function buildFindings(
   }
 
   if (
-    new Date(repository.pushedAt ?? repository.updatedAt).getTime() <
-    staleCutoff
+    isAtLeastDaysOld(
+      repository.pushedAt ?? repository.updatedAt,
+      analyzedAt,
+      365,
+    )
   ) {
     findings.push({
       id: "stale-activity",

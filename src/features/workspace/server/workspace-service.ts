@@ -1,9 +1,5 @@
 import "server-only";
 
-import {
-  PULL_REQUEST_INSPECTION_LIMIT,
-  fetchPullRequestInsights,
-} from "@/features/operations/server/pull-request-service";
 import { authenticatedUserSchema } from "@/features/workspace/server/schemas";
 import { authenticatedRequest } from "@/features/workspace/server/github-client";
 import { fetchRepositories } from "@/features/workspace/server/repository-service";
@@ -19,6 +15,10 @@ import type {
   WorkspaceData,
 } from "@/features/workspace/types";
 import { parseGitHubResponse } from "@/lib/github/parse";
+import {
+  PULL_REQUEST_INSPECTION_LIMIT,
+  fetchPullRequestInsights,
+} from "@/lib/github/pull-request-insights";
 import { readGitHubSession } from "@/lib/github-session";
 import { loadRemote, remoteDataOr } from "@/lib/github/result";
 

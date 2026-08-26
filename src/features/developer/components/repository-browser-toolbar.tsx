@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatNumber } from "@/lib/number";
 
 export type RepositorySort = "stars" | "updated" | "name";
 
@@ -33,7 +34,7 @@ export function RepositoryBrowserToolbar({
           Public repositories
         </h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          Browse all {repositoryCount.toLocaleString()} repositories returned by
+          Browse all {formatNumber(repositoryCount)} repositories returned by
           GitHub
         </p>
       </div>

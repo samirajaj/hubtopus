@@ -7,6 +7,7 @@ import {
 } from "@/features/workspace/components/section-state";
 import { dateValue, formatRelativeDate } from "@/lib/date";
 import type { WorkspaceRepository } from "@/features/workspace/types";
+import { formatNumber } from "@/lib/number";
 
 export function RepositoryInventory({
   repositories,
@@ -69,7 +70,7 @@ export function RepositoryInventory({
       )}
       {repositories.length > 20 || truncated ? (
         <p className="text-muted-foreground mt-3 text-xs">
-          Showing 20 of {repositories.length.toLocaleString()}
+          Showing 20 of {formatNumber(repositories.length)}
           {truncated ? "+" : ""} accessible repositories.
         </p>
       ) : null}

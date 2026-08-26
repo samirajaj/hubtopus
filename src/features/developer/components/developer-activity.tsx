@@ -1,5 +1,6 @@
 import { EmptyState } from "@/features/developer/components/portfolio-states";
 import type { DeveloperData } from "@/features/developer/types";
+import { formatDate } from "@/lib/date";
 
 export function DeveloperActivity({ data }: { data: DeveloperData }) {
   return (
@@ -38,7 +39,7 @@ export function DeveloperActivity({ data }: { data: DeveloperData }) {
                 dateTime={item.createdAt}
                 className="text-muted-foreground text-xs sm:text-right"
               >
-                {formatActivityDate(item.createdAt)}
+                {formatDate(item.createdAt)}
               </time>
             </li>
           ))}
@@ -56,12 +57,4 @@ export function DeveloperActivity({ data }: { data: DeveloperData }) {
       )}
     </section>
   );
-}
-
-function formatActivityDate(value: string): string {
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
 }

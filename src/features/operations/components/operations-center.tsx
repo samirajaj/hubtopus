@@ -17,6 +17,7 @@ import { OperationsFootnote } from "@/features/operations/components/operations-
 import { PaginationControls } from "@/components/app/pagination-controls";
 import { SummaryFact } from "@/components/app/summary-fact";
 import { formatDateTime } from "@/lib/date";
+import { formatNumber } from "@/lib/number";
 import {
   OperationsToolbar,
   type KindFilter,
@@ -139,7 +140,7 @@ export function RepositoryOperationsCenter({
               id="operations-results-heading"
               className="text-sm font-semibold"
             >
-              {filtered.length.toLocaleString()} operations
+              {formatNumber(filtered.length)} operations
             </h2>
             <p className="text-muted-foreground text-xs">
               Live snapshot {formatDateTime(data.analyzedAt)}

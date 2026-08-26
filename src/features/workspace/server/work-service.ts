@@ -2,7 +2,6 @@ import "server-only";
 
 import { z } from "zod";
 
-import { PULL_REQUEST_INSPECTION_LIMIT } from "@/features/operations/server/pull-request-service";
 import { authenticatedRequest } from "@/features/workspace/server/github-client";
 import {
   notificationSchema,
@@ -17,6 +16,7 @@ import type {
 } from "@/features/workspace/types";
 import { GitHubApiError } from "@/lib/github/errors";
 import { parseGitHubResponse } from "@/lib/github/parse";
+import { PULL_REQUEST_INSPECTION_LIMIT } from "@/lib/github/pull-request-insights";
 
 export const WORKFLOW_REPOSITORY_LIMIT = 6;
 

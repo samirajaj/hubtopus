@@ -20,6 +20,7 @@ import {
 } from "@/features/repository-health/domain/health-view";
 import type { RepositoryHealthCenterData } from "@/features/workspace/types";
 import { formatDate } from "@/lib/date";
+import { formatNumber } from "@/lib/number";
 
 const PAGE_SIZE = 12;
 
@@ -139,7 +140,7 @@ export function RepositoryHealthCenter({
           />
           <div className="flex items-center justify-between gap-4">
             <h2 id="health-results-heading" className="text-sm font-semibold">
-              {filtered.length.toLocaleString()} repositories
+              {formatNumber(filtered.length)} repositories
             </h2>
             <p className="text-muted-foreground text-xs">
               Snapshot {formatDate(data.analyzedAt)}
@@ -173,7 +174,7 @@ export function RepositoryHealthCenter({
 
       <p className="text-muted-foreground mt-8 flex items-start gap-2 border-t pt-5 text-xs leading-5">
         <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        Repository metadata covers {data.repositories.length.toLocaleString()}
+        Repository metadata covers {formatNumber(data.repositories.length)}
         {data.repositoriesTruncated ? "+" : ""} accessible repositories. Latest
         workflow status is intentionally limited to{" "}
         {data.workflowInspectionLimit} maintainable source repositories per

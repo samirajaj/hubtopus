@@ -3,10 +3,11 @@ import { ArrowUpRight, GitPullRequest, MessagesSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   EmptyState,
-  formatPortfolioDate,
   OptionalNotice,
 } from "@/features/developer/components/portfolio-states";
 import type { DeveloperData } from "@/features/developer/types";
+import { formatDate } from "@/lib/date";
+import { formatNumber } from "@/lib/number";
 
 export function ExternalContributions({ data }: { data: DeveloperData }) {
   const section = data.externalContributions;
@@ -29,7 +30,7 @@ export function ExternalContributions({ data }: { data: DeveloperData }) {
         </div>
         {section.status === "ready" && section.data.totalCount ? (
           <span className="text-sm font-medium tabular-nums">
-            {section.data.totalCount.toLocaleString()} found
+            {formatNumber(section.data.totalCount)} found
           </span>
         ) : null}
       </div>
@@ -65,7 +66,7 @@ export function ExternalContributions({ data }: { data: DeveloperData }) {
                 </a>
                 <p className="text-muted-foreground mt-1 text-xs">
                   {contribution.repository} #{contribution.number} - Updated{" "}
-                  {formatPortfolioDate(contribution.updatedAt)}
+                  {formatDate(contribution.updatedAt)}
                 </p>
               </div>
               <div className="text-muted-foreground flex items-center gap-3 text-xs sm:justify-end">

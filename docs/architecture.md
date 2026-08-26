@@ -11,11 +11,12 @@ transformations, public-data server services, portfolio sections, repository
 browsing, and comparison views.
 
 `src/features/workspace` owns authenticated workspace DTOs, private GitHub
-services, connection status, queues, maintenance sections, and repository
-inventory.
+services, workspace assembly, connection status, queues, maintenance rules and
+sections, and repository inventory.
 
-`src/features/operations` owns pull request inspection, operation priority and
-deduplication rules, and the repository operations interface.
+`src/features/operations` owns operation priority and deduplication rules and
+the repository operations interface. It consumes the workspace DTO and does
+not participate in authenticated data loading.
 
 `src/features/repository-health` owns health finding rules and the repository
 health interface.
@@ -23,8 +24,14 @@ health interface.
 `src/components/app` contains presentation primitives shared by more than one
 feature. `src/components/ui` contains low-level design-system components.
 
-`src/lib/github` contains only GitHub-wide infrastructure: the server-only
-transport, error mapping, response parsing, and the `RemoteResult` contract.
+`src/lib/github` contains GitHub-wide infrastructure: normalized models, the
+server-only transport and pull request inspection service, response schemas,
+error mapping, parsing, and the `RemoteResult` contract.
+
+`src/lib/config` is the only module that reads environment variables. Server
+configuration is validated at its boundary and remains protected by
+`server-only`. `src/lib/date` and `src/lib/number` own application-wide display
+formatting and date arithmetic.
 
 ## Server and client boundaries
 
@@ -34,7 +41,8 @@ transport, error mapping, response parsing, and the `RemoteResult` contract.
 - Public GitHub requests use explicit revalidation; authenticated requests use
   `cache: "no-store"`.
 - Components receive mapped DTOs rather than raw GitHub responses.
-- Zod schemas stay beside the server feature that owns the external response.
+- Zod schemas stay beside the server feature or shared GitHub service that owns
+  the external response.
 - Domain modules are deterministic and do not perform network or cookie access.
 
 ## Remote data
@@ -49,3 +57,5 @@ GitHub response.
 Routes may import features and shared modules. Features may import shared app
 components, UI primitives, and `lib`, but feature domain modules must not import
 React or Next.js APIs. Shared modules must not import feature implementations.
+Workspace data may flow into operations and repository-health domain modules;
+workspace does not import those consuming features.

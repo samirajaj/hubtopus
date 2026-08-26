@@ -2,24 +2,27 @@ import "server-only";
 
 import { z } from "zod";
 
-import { summarizeCheckRuns } from "@/features/operations/domain/check-summary";
-import { summarizePullRequestReviews } from "@/features/operations/domain/review-summary";
-import {
-  checkRunsSchema,
-  pullRequestDetailSchema,
-  pullRequestReviewSchema,
-} from "@/features/operations/server/pull-request-schemas";
+import { GitHubApiError } from "@/lib/github/errors";
 import type {
   PullRequestCheckSummary,
   PullRequestInsight,
   PullRequestTarget,
-} from "@/features/operations/types";
-import { GitHubApiError } from "@/lib/github/errors";
+} from "@/lib/github/models";
 import { parseGitHubResponse } from "@/lib/github/parse";
+import {
+  checkRunsSchema,
+  pullRequestDetailSchema,
+  pullRequestReviewSchema,
+} from "@/lib/github/pull-request-schemas";
+import {
+  summarizeCheckRuns,
+  summarizePullRequestReviews,
+} from "@/lib/github/pull-request-summary";
 import { loadRemote } from "@/lib/github/result";
 
 export const PULL_REQUEST_INSPECTION_LIMIT = 10;
 const INSPECTION_CONCURRENCY = 3;
+
 type GitHubRequest = (path: string) => Promise<unknown>;
 
 export async function fetchPullRequestInsights(

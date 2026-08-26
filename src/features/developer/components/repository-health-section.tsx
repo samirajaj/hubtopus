@@ -2,7 +2,6 @@ import { Check, PackageCheck, X } from "lucide-react";
 
 import {
   EmptyState,
-  formatPortfolioDate,
   OptionalNotice,
 } from "@/features/developer/components/portfolio-states";
 import type {
@@ -10,6 +9,7 @@ import type {
   Repository,
   RepositoryHealth,
 } from "@/features/developer/types";
+import { formatDate } from "@/lib/date";
 
 export function RepositoryHealthSection({ data }: { data: DeveloperData }) {
   const repositoryById = new Map(
@@ -78,7 +78,7 @@ function RepositoryHealthCard({
       </div>
       <p className="text-muted-foreground mt-1 text-xs">
         Last pushed{" "}
-        {formatPortfolioDate(repository.pushedAt ?? repository.updatedAt)}
+        {formatDate(repository.pushedAt ?? repository.updatedAt)}
       </p>
 
       {insight.health.status === "ready" && insight.health.data ? (
@@ -110,7 +110,7 @@ function RepositoryHealthCard({
             />
             {insight.latestRelease.data.tagName}
             {insight.latestRelease.data.publishedAt
-              ? ` - ${formatPortfolioDate(insight.latestRelease.data.publishedAt)}`
+              ? ` - ${formatDate(insight.latestRelease.data.publishedAt)}`
               : ""}
           </a>
         ) : insight.latestRelease.status === "ready" ? (

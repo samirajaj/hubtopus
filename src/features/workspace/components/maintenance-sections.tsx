@@ -5,51 +5,9 @@ import {
   SectionHeading,
   Unavailable,
 } from "@/features/workspace/components/section-state";
-import { dateValue } from "@/lib/date";
+import type { MaintenanceItem } from "@/features/workspace/domain/maintenance";
 import type { RemoteResult } from "@/lib/github/result";
-import type {
-  WorkspaceData,
-  WorkspaceRepository,
-  WorkflowFailure,
-} from "@/features/workspace/types";
-
-export type MaintenanceItem = {
-  repository: WorkspaceRepository;
-  signals: string[];
-};
-
-export function buildMaintenanceItems(data: WorkspaceData): MaintenanceItem[] {
-  const staleCutoff = dateValue(data.analyzedAt) - 365 * 24 * 60 * 60 * 1000;
-
-  return data.repositories
-    .filter(
-      (repository) =>
-        repository.canAdminister &&
-        !repository.isArchived &&
-        !repository.isFork,
-    )
-    .map((repository) => {
-      const signals: string[] = [];
-      if (!repository.description) signals.push("missing description");
-      if (!repository.license && !repository.isPrivate) {
-        signals.push("missing license");
-      }
-      if (!repository.topics.length) signals.push("no topics");
-      if (
-        dateValue(repository.pushedAt ?? repository.updatedAt) < staleCutoff
-      ) {
-        signals.push("no push in 12 months");
-      }
-      return { repository, signals };
-    })
-    .filter((item) => item.signals.length)
-    .sort(
-      (left, right) =>
-        right.signals.length - left.signals.length ||
-        dateValue(right.repository.updatedAt) -
-          dateValue(left.repository.updatedAt),
-    );
-}
+import type { WorkflowFailure } from "@/features/workspace/types";
 
 export function MaintenanceSection({ items }: { items: MaintenanceItem[] }) {
   return (

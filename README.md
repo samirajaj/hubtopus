@@ -38,7 +38,8 @@ Hubtopus uses Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui primitiv
 - `src/features` groups developer, workspace, operations, and repository-health code by ownership.
 - Each feature separates components, server access, domain rules, and public DTOs where applicable.
 - `src/components/app` contains cross-feature presentation primitives; `src/components/ui` contains design-system primitives.
-- `src/lib/github` contains only shared GitHub transport, parsing, errors, and remote-result infrastructure.
+- `src/lib/github` contains normalized GitHub models plus shared transport, inspection, parsing, errors, and remote-result infrastructure.
+- `src/lib/config` is the single server-validated boundary for environment variables.
 
 See [`docs/architecture.md`](docs/architecture.md) for dependency direction and server/client boundary rules.
 

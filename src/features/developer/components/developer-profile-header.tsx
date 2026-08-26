@@ -10,6 +10,8 @@ import {
 
 import { BriefActions } from "@/features/developer/components/brief-actions";
 import type { DeveloperProfile } from "@/features/developer/types";
+import { formatMonthYear } from "@/lib/date";
+import { formatNumber } from "@/lib/number";
 
 export function DeveloperProfileHeader({
   profile,
@@ -116,7 +118,7 @@ function Metric({ label, value }: { label: string; value: number }) {
     <div className="border-r px-4 py-5 last:border-r-0 even:border-r-0 sm:last:border-r-0 sm:even:border-r">
       <dt className="text-muted-foreground text-xs font-medium">{label}</dt>
       <dd className="mt-1 text-2xl font-semibold tabular-nums">
-        {value.toLocaleString()}
+        {formatNumber(value)}
       </dd>
     </div>
   );
@@ -125,11 +127,4 @@ function Metric({ label, value }: { label: string; value: number }) {
 function displayUrl(value: string): string {
   const url = new URL(value);
   return `${url.hostname}${url.pathname === "/" ? "" : url.pathname}`;
-}
-
-function formatMonthYear(value: string): string {
-  return new Intl.DateTimeFormat("en", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(value));
 }

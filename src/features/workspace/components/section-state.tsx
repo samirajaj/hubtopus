@@ -1,3 +1,5 @@
+import { formatNumber } from "@/lib/number";
+
 export function SectionHeading({
   title,
   description,
@@ -22,7 +24,7 @@ export function SectionHeading({
       </div>
       {count !== undefined ? (
         <span className="text-muted-foreground font-mono text-xs tabular-nums">
-          {count.toLocaleString()}
+          {formatNumber(count)}
         </span>
       ) : null}
     </div>

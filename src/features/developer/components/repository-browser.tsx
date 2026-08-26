@@ -10,6 +10,8 @@ import {
   type RepositorySort,
 } from "@/features/developer/components/repository-browser-toolbar";
 import type { Repository } from "@/features/developer/types";
+import { compareDatesDescending, formatDate } from "@/lib/date";
+import { formatNumber } from "@/lib/number";
 
 const PAGE_SIZE = 8;
 
@@ -35,9 +37,7 @@ export function RepositoryBrowser({
     return matches.sort((a, b) => {
       if (sort === "name") return a.name.localeCompare(b.name);
       if (sort === "updated") {
-        return (
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
+        return compareDatesDescending(a.updatedAt, b.updatedAt);
       }
       return b.stars - a.stars || b.forks - a.forks;
     });
@@ -113,17 +113,17 @@ export function RepositoryBrowser({
                   ) : null}
                   <span className="inline-flex items-center gap-1">
                     <Star className="size-3.5" aria-hidden="true" />{" "}
-                    {repository.stars.toLocaleString()}
+                    {formatNumber(repository.stars)}
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <GitFork className="size-3.5" aria-hidden="true" />{" "}
-                    {repository.forks.toLocaleString()}
+                    {formatNumber(repository.forks)}
                   </span>
                   <span>Updated {formatDate(repository.updatedAt)}</span>
                 </div>
               </div>
               <div className="text-muted-foreground text-xs sm:text-right">
-                {repository.openIssues.toLocaleString()} open{" "}
+                {formatNumber(repository.openIssues)} open{" "}
                 {repository.openIssues === 1 ? "issue" : "issues"}
               </div>
             </article>
@@ -144,12 +144,4 @@ export function RepositoryBrowser({
       />
     </section>
   );
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
 }

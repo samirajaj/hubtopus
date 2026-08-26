@@ -1,6 +1,7 @@
 import { AlertCircle, Clock3, SearchX } from "lucide-react";
 
 import { DeveloperSearch } from "@/components/developer-search";
+import { formatTimeWithZone } from "@/lib/date";
 import type { GitHubErrorKind } from "@/lib/github/errors";
 
 export function GitHubErrorState({
@@ -22,7 +23,7 @@ export function GitHubErrorState({
       icon: Clock3,
       title: "GitHub rate limit reached",
       description: resetAt
-        ? `GitHub should accept requests again after ${new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(resetAt)}.`
+        ? `GitHub should accept requests again after ${formatTimeWithZone(resetAt)}.`
         : "GitHub is temporarily refusing additional requests. Try again shortly.",
     },
     unavailable: {

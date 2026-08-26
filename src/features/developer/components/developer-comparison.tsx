@@ -1,11 +1,9 @@
 import { ComparisonForm } from "@/features/developer/components/comparison-form";
 import { DeveloperIdentity } from "@/features/developer/components/developer-identity";
-import {
-  buildComparisonFacts,
-  formatComparisonDate,
-  formatComparisonNumber,
-} from "@/features/developer/domain/comparison-facts";
+import { buildComparisonFacts } from "@/features/developer/domain/comparison-facts";
 import type { DeveloperSummary } from "@/features/developer/types";
+import { formatDate } from "@/lib/date";
+import { formatNumber } from "@/lib/number";
 
 export function DeveloperComparison({
   left,
@@ -19,33 +17,33 @@ export function DeveloperComparison({
   const rows: Array<{ label: string; left: string; right: string }> = [
     {
       label: "Public repos",
-      left: formatComparisonNumber(left.profile.publicRepositories),
-      right: formatComparisonNumber(right.profile.publicRepositories),
+      left: formatNumber(left.profile.publicRepositories),
+      right: formatNumber(right.profile.publicRepositories),
     },
     {
       label: "Source repos",
-      left: formatComparisonNumber(leftFacts.sourceRepositories),
-      right: formatComparisonNumber(rightFacts.sourceRepositories),
+      left: formatNumber(leftFacts.sourceRepositories),
+      right: formatNumber(rightFacts.sourceRepositories),
     },
     {
       label: "Active sources",
-      left: formatComparisonNumber(leftFacts.activeSourceRepositories),
-      right: formatComparisonNumber(rightFacts.activeSourceRepositories),
+      left: formatNumber(leftFacts.activeSourceRepositories),
+      right: formatNumber(rightFacts.activeSourceRepositories),
     },
     {
       label: "Stars received",
-      left: formatComparisonNumber(leftFacts.totalStars),
-      right: formatComparisonNumber(rightFacts.totalStars),
+      left: formatNumber(leftFacts.totalStars),
+      right: formatNumber(rightFacts.totalStars),
     },
     {
       label: "Forks received",
-      left: formatComparisonNumber(leftFacts.totalForks),
-      right: formatComparisonNumber(rightFacts.totalForks),
+      left: formatNumber(leftFacts.totalForks),
+      right: formatNumber(rightFacts.totalForks),
     },
     {
       label: "Followers",
-      left: formatComparisonNumber(left.profile.followers),
-      right: formatComparisonNumber(right.profile.followers),
+      left: formatNumber(left.profile.followers),
+      right: formatNumber(right.profile.followers),
     },
     {
       label: "Primary language",
@@ -60,10 +58,10 @@ export function DeveloperComparison({
     {
       label: "Latest source push",
       left: leftFacts.latestPush
-        ? formatComparisonDate(leftFacts.latestPush)
+        ? formatDate(leftFacts.latestPush)
         : "No source activity",
       right: rightFacts.latestPush
-        ? formatComparisonDate(rightFacts.latestPush)
+        ? formatDate(rightFacts.latestPush)
         : "No source activity",
     },
   ];

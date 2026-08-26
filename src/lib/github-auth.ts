@@ -3,6 +3,16 @@ import "server-only";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
+import {
+  getGitHubAppConfig,
+  getSiteUrl,
+  isProduction,
+  type GitHubAppConfig,
+} from "@/lib/config/server";
+import { requestGitHub } from "@/lib/github/client";
+import { parseGitHubResponse } from "@/lib/github/parse";
+import { secureCookieOptions } from "@/lib/http/cookies";
+
 const userSchema = z.object({ login: z.string().min(1).max(39) });
 const tokenResponseSchema = z.object({
   access_token: z.string().min(20).max(512),
@@ -10,36 +20,21 @@ const tokenResponseSchema = z.object({
   token_type: z.string(),
 });
 
-export type GitHubAppConfig = {
-  clientId: string;
-  clientSecret: string;
-};
-
-export function getGitHubAppConfig(): GitHubAppConfig | null {
-  const clientId = process.env.GITHUB_APP_CLIENT_ID?.trim();
-  const clientSecret = process.env.GITHUB_APP_CLIENT_SECRET?.trim();
-  return clientId && clientSecret ? { clientId, clientSecret } : null;
-}
+export type { GitHubAppConfig };
+export { getGitHubAppConfig };
 
 export function isGitHubAppConfigured(): boolean {
   return Boolean(getGitHubAppConfig());
 }
 
 export function getOAuthStateCookieName(): string {
-  return process.env.NODE_ENV === "production"
+  return isProduction()
     ? "__Host-hubtopus-oauth-state"
     : "hubtopus-oauth-state";
 }
 
 export function getOAuthStateCookieOptions() {
-  return {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-    maxAge: 60 * 10,
-    priority: "high" as const,
-  };
+  return secureCookieOptions(60 * 10);
 }
 
 export function createOAuthState(): string {
@@ -60,14 +55,7 @@ export function isValidOAuthState(
 }
 
 export function getGitHubCallbackUrl(requestOrigin: string): string {
-  let origin = requestOrigin;
-  if (process.env.SITE_URL) {
-    try {
-      origin = new URL(process.env.SITE_URL).origin;
-    } catch {
-      origin = requestOrigin;
-    }
-  }
+  const origin = getSiteUrl()?.origin ?? requestOrigin;
   return new URL("/api/auth/github/callback", origin).toString();
 }
 
@@ -75,14 +63,13 @@ export async function validateGitHubToken(
   token: string,
 ): Promise<string | null> {
   try {
-    const response = await fetch("https://api.github.com/user", {
-      headers: githubHeaders(token),
+    const raw = await requestGitHub("/user", {
+      token,
       cache: "no-store",
+      unauthorizedMessage: "GitHub rejected the supplied token.",
     });
-    if (!response.ok) return null;
-
-    const result = userSchema.safeParse(await response.json());
-    return result.success ? result.data.login : null;
+    return parseGitHubResponse(userSchema, raw, "authenticated user data")
+      .login;
   } catch {
     return null;
   }
@@ -125,13 +112,4 @@ export async function exchangeGitHubAppCode(
   } catch {
     return null;
   }
-}
-
-function githubHeaders(token: string): HeadersInit {
-  return {
-    Accept: "application/vnd.github+json",
-    Authorization: `Bearer ${token}`,
-    "X-GitHub-Api-Version": "2022-11-28",
-    "User-Agent": "Hubtopus",
-  };
 }

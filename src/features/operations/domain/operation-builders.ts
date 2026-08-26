@@ -8,9 +8,9 @@ import type {
   WorkspaceNotification,
   WorkflowFailure,
 } from "@/features/workspace/types";
+import { ageInDays } from "@/lib/date";
 import { remoteDataOr } from "@/lib/github/result";
 
-const DAY_IN_MILLISECONDS = 86_400_000;
 const STALE_ISSUE_DAYS = 30;
 const STALE_PULL_REQUEST_DAYS = 14;
 
@@ -162,15 +162,6 @@ function notificationPriority(reason: string): OperationPriority {
     return "medium";
   }
   return "low";
-}
-
-function ageInDays(value: string, referenceTime: number): number {
-  return Math.max(
-    0,
-    Math.floor(
-      (referenceTime - new Date(value).getTime()) / DAY_IN_MILLISECONDS,
-    ),
-  );
 }
 
 function formatReason(value: string): string {

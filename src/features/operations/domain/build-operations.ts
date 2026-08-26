@@ -13,12 +13,13 @@ import {
 } from "@/features/operations/domain/operation-utils";
 import type { RepositoryOperationsData } from "@/features/operations/types";
 import type { WorkspaceData } from "@/features/workspace/types";
+import { dateValue } from "@/lib/date";
 import { remoteDataOr } from "@/lib/github/result";
 
 export function buildRepositoryOperations(
   data: WorkspaceData,
 ): RepositoryOperationsData {
-  const referenceTime = new Date(data.analyzedAt).getTime();
+  const referenceTime = dateValue(data.analyzedAt);
   const pullRequestInsights = remoteDataOr(data.pullRequestInsights, []);
   const insights = new Map(
     pullRequestInsights.map((insight) => [

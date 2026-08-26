@@ -9,6 +9,9 @@ import {
 import { cookies } from "next/headers";
 import { z } from "zod";
 
+import { getSessionSecret, isProduction } from "@/lib/config/server";
+import { secureCookieOptions } from "@/lib/http/cookies";
+
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
 const sessionSchema = z.object({
   token: z.string().min(20).max(512),
@@ -20,20 +23,11 @@ const sessionSchema = z.object({
 export type GitHubSession = z.infer<typeof sessionSchema>;
 
 export function getSessionCookieName(): string {
-  return process.env.NODE_ENV === "production"
-    ? "__Host-hubtopus-session"
-    : "hubtopus-session";
+  return isProduction() ? "__Host-hubtopus-session" : "hubtopus-session";
 }
 
 export function getSessionCookieOptions(maxAge = SESSION_DURATION_SECONDS) {
-  return {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-    maxAge,
-    priority: "high" as const,
-  };
+  return secureCookieOptions(maxAge);
 }
 
 export function isSessionConfigured(): boolean {
@@ -116,9 +110,4 @@ function getEncryptionKey(): Buffer {
     );
   }
   return createHash("sha256").update(secret, "utf8").digest();
-}
-
-function getSessionSecret(): string | null {
-  const secret = process.env.HUBTOPUS_SESSION_SECRET?.trim();
-  return secret && secret.length >= 32 ? secret : null;
 }
