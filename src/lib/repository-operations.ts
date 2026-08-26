@@ -33,6 +33,7 @@ export type RepositoryOperation = {
 
 export type RepositoryOperationsData = {
   analyzedAt: string;
+  connectionMethod: WorkspaceData["connection"]["method"];
   items: RepositoryOperation[];
   workflowInspectionLimit: number;
   pullRequestInspectionLimit: number;
@@ -66,6 +67,7 @@ export function buildRepositoryOperations(
 
   return {
     analyzedAt: data.analyzedAt,
+    connectionMethod: data.connection.method,
     items: deduplicateOperations(items).sort(compareOperations),
     workflowInspectionLimit: data.workflowInspectionLimit,
     pullRequestInspectionLimit: data.pullRequestInspectionLimit,

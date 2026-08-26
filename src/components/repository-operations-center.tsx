@@ -74,9 +74,7 @@ export function RepositoryOperationsCenter({
     safePage * PAGE_SIZE,
   );
   const hasFilters = query || priority !== "all" || kind !== "all";
-  const hasLimitedCoverage = Object.values(data.coverage).some(
-    (status) => status !== "ready",
-  );
+  const limitedCoverage = getLimitedCoverage(data);
 
   function updateFilter(update: () => void) {
     update();
@@ -132,7 +130,9 @@ export function RepositoryOperationsCenter({
         />
       </section>
 
-      {hasLimitedCoverage ? <CoverageNotice data={data} /> : null}
+      {limitedCoverage.length ? (
+        <CoverageNotice limited={limitedCoverage} />
+      ) : null}
 
       <section className="mt-10" aria-labelledby="operations-results-heading">
         <div className="mb-5 flex flex-col gap-4">
@@ -269,6 +269,12 @@ export function RepositoryOperationsCenter({
           repositories, and pull request intelligence covers up to{" "}
           {data.pullRequestInspectionLimit} priority pull requests per request.
         </p>
+        {isExpectedNotificationLimitation(data) ? (
+          <p>
+            Personal GitHub notifications are not available through GitHub App
+            sessions. Other operation sources are unaffected.
+          </p>
+        ) : null}
       </div>
     </main>
   );
@@ -470,13 +476,7 @@ function SignalBadge({
   );
 }
 
-function CoverageNotice({ data }: { data: RepositoryOperationsData }) {
-  const limited = Object.entries(data.coverage)
-    .filter(([, status]) => status !== "ready")
-    .map(
-      ([source, status]) => `${coverageLabel(source)} (${statusLabel(status)})`,
-    );
-
+function CoverageNotice({ limited }: { limited: string[] }) {
   return (
     <div className="mt-6 flex gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
       <CircleAlert
@@ -491,6 +491,30 @@ function CoverageNotice({ data }: { data: RepositoryOperationsData }) {
         </p>
       </div>
     </div>
+  );
+}
+
+function getLimitedCoverage(data: RepositoryOperationsData): string[] {
+  return Object.entries(data.coverage)
+    .filter(([source, status]) => {
+      if (status === "ready") return false;
+      return !(
+        source === "notifications" &&
+        status === "unavailable" &&
+        data.connectionMethod === "github-app"
+      );
+    })
+    .map(
+      ([source, status]) => `${coverageLabel(source)} (${statusLabel(status)})`,
+    );
+}
+
+function isExpectedNotificationLimitation(
+  data: RepositoryOperationsData,
+): boolean {
+  return (
+    data.connectionMethod === "github-app" &&
+    data.coverage.notifications === "unavailable"
   );
 }
 
