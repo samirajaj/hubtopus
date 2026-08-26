@@ -22,6 +22,7 @@ Hubtopus is a focused GitHub developer explorer. Search for a GitHub username or
 - Personal queues for assigned issues, requested reviews, and authored pull requests
 - Permission-aware notifications and latest GitHub Actions failure checks
 - Prioritized repository operations queue with search, filters, deduplication, and direct GitHub actions
+- Bounded pull request intelligence for mergeability, review state, requested reviewers, and check runs
 - Repository maintenance signals for descriptions, licenses, topics, and activity
 - Filterable repository health center with severity, status, visibility, and direct remediation links
 - Explicit not-found, rate-limit, empty, loading, and unexpected-error states
@@ -78,7 +79,7 @@ Repository discovery is bounded at 500 accessible repositories. Latest workflow 
 
 The repository health center is available at `/workspace/health`. Its findings are factual rules rather than a synthetic score: latest workflow failure, no push within 12 months, missing public-project license, missing description, and missing topics. Archived repositories are shown but excluded from maintenance findings.
 
-The repository operations center is available at `/workspace/operations`. It creates a live, explainable queue from requested reviews, assigned issues, authored pull requests, latest workflow failures, and compatible notifications. Results are deduplicated and prioritized per request; operation history is not persisted.
+The repository operations center is available at `/workspace/operations`. It creates a live, explainable queue from requested reviews, assigned issues, authored pull requests, latest workflow failures, and compatible notifications. Up to ten priority pull requests are enriched with mergeability, review state, requested reviewers, and check runs using bounded concurrency. Results are deduplicated and prioritized per request; operation history is not persisted.
 
 ### GitHub App registration
 
@@ -88,7 +89,7 @@ Create a GitHub App and set its user authorization callback URL to:
 http://localhost:3000/api/auth/github/callback
 ```
 
-Use the production `SITE_URL` origin for the production callback. Configure repository permissions for Metadata (read-only), Issues (read-only), Pull requests (read-only), and Actions (read-only). Install the app only on the accounts and repositories Hubtopus should inspect. The app flow uses a short-lived, HttpOnly state cookie and rejects missing or mismatched callback state.
+Use the production `SITE_URL` origin for the production callback. Configure repository permissions for Metadata (read-only), Issues (read-only), Pull requests (read-only), Actions (read-only), and Checks (read-only). Install the app only on the accounts and repositories Hubtopus should inspect. Without Checks permission, pull request details and reviews still load while check-run signals show as unavailable. The app flow uses a short-lived, HttpOnly state cookie and rejects missing or mismatched callback state.
 
 GitHub responses are cached for 15 minutes to reduce duplicate requests. The complete repository list is treated as core data; contribution search, organizations, stars, community health, releases, and events degrade independently if GitHub cannot return them. Repository-level analysis is intentionally limited to three source projects to avoid an N+1 request pattern.
 

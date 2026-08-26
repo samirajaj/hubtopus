@@ -3,6 +3,11 @@ import "server-only";
 import { z } from "zod";
 
 import { GitHubApiError, type OptionalData } from "@/lib/github";
+import {
+  fetchPullRequestInsights,
+  PULL_REQUEST_INSPECTION_LIMIT,
+  type PullRequestInsight,
+} from "@/lib/github-pull-requests";
 import { readGitHubSession } from "@/lib/github-session";
 
 const API_ROOT = "https://api.github.com";
@@ -173,6 +178,8 @@ export type WorkspaceData = {
   notifications: OptionalData<WorkspaceNotification[]>;
   workflowFailures: OptionalData<WorkflowFailure[]>;
   workflowInspectionLimit: number;
+  pullRequestInsights: OptionalData<PullRequestInsight[]>;
+  pullRequestInspectionLimit: number;
 };
 
 export type RepositoryHealthCenterData = {
@@ -226,10 +233,24 @@ export async function getWorkspaceData(): Promise<WorkspaceData | null> {
     notificationsPromise,
   ]);
 
-  const workflowFailures = await loadOptional(
-    () => fetchWorkflowFailures(session.token, repositoryResult.repositories),
-    [],
+  const pullRequestTargets = selectPullRequestTargets(
+    reviewRequests.data.items,
+    authoredPullRequests.data.items,
   );
+  const [workflowFailures, pullRequestInsights] = await Promise.all([
+    loadOptional(
+      () => fetchWorkflowFailures(session.token, repositoryResult.repositories),
+      [],
+    ),
+    loadOptional(
+      () =>
+        fetchPullRequestInsights(
+          (path) => authenticatedRequest(session.token, path),
+          pullRequestTargets,
+        ),
+      [],
+    ),
+  ]);
 
   return {
     analyzedAt: new Date().toISOString(),
@@ -251,6 +272,8 @@ export async function getWorkspaceData(): Promise<WorkspaceData | null> {
     notifications,
     workflowFailures,
     workflowInspectionLimit: WORKFLOW_REPOSITORY_LIMIT,
+    pullRequestInsights,
+    pullRequestInspectionLimit: PULL_REQUEST_INSPECTION_LIMIT,
   };
 }
 
@@ -444,6 +467,19 @@ async function fetchNotifications(
   }));
 }
 
+function selectPullRequestTargets(
+  reviewRequests: WorkItem[],
+  authoredPullRequests: WorkItem[],
+): WorkItem[] {
+  const unique = new Map<string, WorkItem>();
+  for (const item of [...reviewRequests, ...authoredPullRequests]) {
+    if (item.kind !== "pull-request") continue;
+    const key = pullRequestKey(item.repository, item.number);
+    if (!unique.has(key)) unique.set(key, item);
+  }
+  return [...unique.values()].slice(0, PULL_REQUEST_INSPECTION_LIMIT);
+}
+
 async function fetchWorkflowFailures(
   token: string,
   repositories: WorkspaceRepository[],
@@ -536,6 +572,10 @@ function parseExternal<T>(
 
 function repositoryFromApiUrl(value: string): string {
   return new URL(value).pathname.replace(/^\/repos\//, "").replace(/^\//, "");
+}
+
+function pullRequestKey(repository: string, number: number): string {
+  return `${repository.toLowerCase()}#${number}`;
 }
 
 function apiUrlToGitHubUrl(value: string | null): string | null {

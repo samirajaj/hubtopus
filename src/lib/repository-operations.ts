@@ -1,4 +1,5 @@
 import type { OptionalDataStatus } from "@/lib/github";
+import type { PullRequestInsight } from "@/lib/github-pull-requests";
 import type {
   WorkspaceData,
   WorkspaceNotification,
@@ -27,14 +28,19 @@ export type RepositoryOperation = {
   repository: string;
   url: string;
   updatedAt: string;
+  pullRequest?: PullRequestInsight;
 };
 
 export type RepositoryOperationsData = {
   analyzedAt: string;
   items: RepositoryOperation[];
   workflowInspectionLimit: number;
+  pullRequestInspectionLimit: number;
   coverage: {
     workQueues: OptionalDataStatus;
+    pullRequests: OptionalDataStatus;
+    reviews: OptionalDataStatus;
+    checks: OptionalDataStatus;
     workflows: OptionalDataStatus;
     notifications: OptionalDataStatus;
   };
@@ -44,11 +50,17 @@ export function buildRepositoryOperations(
   data: WorkspaceData,
 ): RepositoryOperationsData {
   const referenceTime = new Date(data.analyzedAt).getTime();
+  const insights = new Map(
+    data.pullRequestInsights.data.map((insight) => [
+      pullRequestKey(insight.repository, insight.number),
+      insight,
+    ]),
+  );
   const items = [
-    ...buildReviewOperations(data),
+    ...buildReviewOperations(data, insights),
     ...buildWorkflowOperations(data.workflowFailures.data),
     ...buildAssignedIssueOperations(data, referenceTime),
-    ...buildPullRequestOperations(data, referenceTime),
+    ...buildPullRequestOperations(data, referenceTime, insights),
     ...buildNotificationOperations(data.notifications.data),
   ];
 
@@ -56,30 +68,47 @@ export function buildRepositoryOperations(
     analyzedAt: data.analyzedAt,
     items: deduplicateOperations(items).sort(compareOperations),
     workflowInspectionLimit: data.workflowInspectionLimit,
+    pullRequestInspectionLimit: data.pullRequestInspectionLimit,
     coverage: {
       workQueues: combineStatuses([
         data.reviewRequests.status,
         data.assignedIssues.status,
         data.authoredPullRequests.status,
       ]),
+      pullRequests: data.pullRequestInsights.status,
+      reviews: combineStatuses(
+        data.pullRequestInsights.data.map((insight) => insight.review.status),
+      ),
+      checks: combineStatuses(
+        data.pullRequestInsights.data.map((insight) => insight.checks.status),
+      ),
       workflows: data.workflowFailures.status,
       notifications: data.notifications.status,
     },
   };
 }
 
-function buildReviewOperations(data: WorkspaceData): RepositoryOperation[] {
-  return data.reviewRequests.data.items.map((item) => ({
-    id: `review:${item.id}`,
-    priority: "high",
-    kind: "review",
-    title: item.title,
-    detail: `Your review is requested on ${item.repository} #${item.number}.`,
-    action: "Review pull request",
-    repository: item.repository,
-    url: item.url,
-    updatedAt: item.updatedAt,
-  }));
+function buildReviewOperations(
+  data: WorkspaceData,
+  insights: Map<string, PullRequestInsight>,
+): RepositoryOperation[] {
+  return data.reviewRequests.data.items.map((item) => {
+    const pullRequest = insights.get(
+      pullRequestKey(item.repository, item.number),
+    );
+    return {
+      id: `review:${item.id}`,
+      priority: "high",
+      kind: "review",
+      title: item.title,
+      detail: `Your review is requested on ${item.repository} #${item.number}.`,
+      action: "Review pull request",
+      repository: item.repository,
+      url: item.url,
+      updatedAt: item.updatedAt,
+      pullRequest,
+    };
+  });
 }
 
 function buildAssignedIssueOperations(
@@ -105,13 +134,17 @@ function buildAssignedIssueOperations(
 function buildPullRequestOperations(
   data: WorkspaceData,
   referenceTime: number,
+  insights: Map<string, PullRequestInsight>,
 ): RepositoryOperation[] {
   return data.authoredPullRequests.data.items.map((item) => {
     const age = ageInDays(item.updatedAt, referenceTime);
     const isStale = age >= STALE_PULL_REQUEST_DAYS;
+    const pullRequest = insights.get(
+      pullRequestKey(item.repository, item.number),
+    );
     return {
       id: `pull-request:${item.id}`,
-      priority: isStale ? "medium" : "low",
+      priority: pullRequestPriority(pullRequest, isStale),
       kind: "pull-request",
       title: item.title,
       detail: isStale
@@ -121,8 +154,30 @@ function buildPullRequestOperations(
       repository: item.repository,
       url: item.url,
       updatedAt: item.updatedAt,
+      pullRequest,
     };
   });
+}
+
+function pullRequestPriority(
+  insight: PullRequestInsight | undefined,
+  isStale: boolean,
+): OperationPriority {
+  if (
+    insight?.mergeability === "conflicting" ||
+    insight?.review.data.state === "changes-requested" ||
+    Boolean(insight?.checks.data.failed)
+  ) {
+    return "high";
+  }
+  if (
+    isStale ||
+    insight?.review.data.state === "waiting-review" ||
+    Boolean(insight?.checks.data.pending)
+  ) {
+    return "medium";
+  }
+  return "low";
 }
 
 function buildWorkflowOperations(
@@ -180,13 +235,14 @@ function deduplicateOperations(
   for (const operation of operations) {
     const key = deduplicationKey(operation);
     const existing = byUrl.get(key);
-    if (
+    const preferred =
       !existing ||
       operationPriorityRank(operation.priority) >
         operationPriorityRank(existing.priority)
-    ) {
-      byUrl.set(key, operation);
-    }
+        ? operation
+        : existing;
+    const pullRequest = operation.pullRequest ?? existing?.pullRequest;
+    byUrl.set(key, pullRequest ? { ...preferred, pullRequest } : preferred);
   }
 
   return [...byUrl.values()];
@@ -201,6 +257,10 @@ function deduplicationKey(operation: RepositoryOperation): string {
     return operation.id;
   }
   return operation.url;
+}
+
+function pullRequestKey(repository: string, number: number): string {
+  return `${repository.toLowerCase()}#${number}`;
 }
 
 function combineStatuses(statuses: OptionalDataStatus[]): OptionalDataStatus {

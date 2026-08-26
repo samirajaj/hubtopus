@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  CircleX,
   ListChecks,
   Search,
   ShieldCheck,
@@ -23,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { PullRequestInsight } from "@/lib/github-pull-requests";
 import type {
   OperationKind,
   OperationPriority,
@@ -99,9 +101,9 @@ export function RepositoryOperationsCenter({
             Repository operations
           </h1>
           <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
-            One prioritized queue for requested reviews, assigned issues, open
-            pull requests, failed workflows, and compatible GitHub
-            notifications.
+            One prioritized queue with pull request mergeability, review state,
+            requested reviewers, check runs, assigned issues, workflow failures,
+            and compatible GitHub notifications.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -124,7 +126,10 @@ export function RepositoryOperationsCenter({
         <SummaryFact label="Open operations" value={data.items.length} />
         <SummaryFact label="High priority" value={summary.high} />
         <SummaryFact label="Reviews requested" value={summary.reviews} />
-        <SummaryFact label="Workflow failures" value={summary.workflows} />
+        <SummaryFact
+          label="Pull requests inspected"
+          value={summary.inspectedPullRequests}
+        />
       </section>
 
       {hasLimitedCoverage ? <CoverageNotice data={data} /> : null}
@@ -252,16 +257,17 @@ export function RepositoryOperationsCenter({
       <div className="text-muted-foreground mt-8 space-y-2 border-t pt-5 text-xs leading-5">
         <p className="flex items-start gap-2">
           <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          High priority means a requested review, latest workflow failure,
-          security or review notification, or an assigned issue with no update
-          for 30 days.
+          High priority means a requested review, latest workflow failure, pull
+          request conflict, failed check, requested changes, security or review
+          notification, or an assigned issue with no update for 30 days.
         </p>
         <p className="flex items-start gap-2">
           <ListChecks className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           This live snapshot uses the current encrypted cookie session and does
           not persist operation history. Workflow checks cover up to{" "}
           {data.workflowInspectionLimit} recently updated maintainable source
-          repositories per request.
+          repositories, and pull request intelligence covers up to{" "}
+          {data.pullRequestInspectionLimit} priority pull requests per request.
         </p>
       </div>
     </main>
@@ -294,14 +300,173 @@ function OperationItem({
         <p className="text-muted-foreground mt-1 text-xs">
           Updated {formatRelativeDate(item.updatedAt, referenceTime)}
         </p>
+        {item.pullRequest ? (
+          <PullRequestSignals insight={item.pullRequest} />
+        ) : null}
       </div>
-      <Button variant="outline" size="sm" asChild>
-        <a href={item.url} target="_blank" rel="noreferrer">
-          {item.action}
-          <ArrowUpRight aria-hidden="true" />
-        </a>
-      </Button>
+      <div className="flex flex-wrap gap-2 sm:justify-end">
+        {item.pullRequest?.checks.data.firstFailureUrl ? (
+          <Button variant="outline" size="sm" asChild>
+            <a
+              href={item.pullRequest.checks.data.firstFailureUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <CircleX aria-hidden="true" />
+              Failed check
+            </a>
+          </Button>
+        ) : null}
+        <Button variant="outline" size="sm" asChild>
+          <a href={item.url} target="_blank" rel="noreferrer">
+            {item.action}
+            <ArrowUpRight aria-hidden="true" />
+          </a>
+        </Button>
+      </div>
     </article>
+  );
+}
+
+function PullRequestSignals({ insight }: { insight: PullRequestInsight }) {
+  const review = insight.review.data;
+  const checks = insight.checks.data;
+  const requestedReviewers = review.requestedReviewers.join(", ");
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      {insight.isDraft ? <SignalBadge label="Draft" tone="neutral" /> : null}
+      <SignalBadge
+        label={
+          insight.mergeability === "conflicting"
+            ? "Merge conflict"
+            : insight.mergeability === "mergeable"
+              ? "Mergeable"
+              : "Mergeability pending"
+        }
+        tone={
+          insight.mergeability === "conflicting"
+            ? "danger"
+            : insight.mergeability === "mergeable"
+              ? "success"
+              : "neutral"
+        }
+      />
+      {insight.review.status === "ready" ? (
+        <ReviewSignal review={review} />
+      ) : (
+        <SignalBadge
+          label={
+            insight.review.status === "rate-limit"
+              ? "Reviews rate limited"
+              : "Reviews unavailable"
+          }
+          tone="neutral"
+        />
+      )}
+      {insight.checks.status === "ready" ? (
+        <CheckSignals checks={checks} />
+      ) : (
+        <SignalBadge
+          label={
+            insight.checks.status === "rate-limit"
+              ? "Checks rate limited"
+              : "Checks unavailable"
+          }
+          tone="neutral"
+        />
+      )}
+      {requestedReviewers ? (
+        <span
+          className="text-muted-foreground max-w-full truncate text-xs"
+          title={requestedReviewers}
+        >
+          Requested: {requestedReviewers}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function ReviewSignal({
+  review,
+}: {
+  review: PullRequestInsight["review"]["data"];
+}) {
+  if (review.state === "draft") return null;
+  if (review.state === "changes-requested") {
+    return (
+      <SignalBadge
+        label={`${review.changesRequested} requested changes`}
+        tone="danger"
+      />
+    );
+  }
+  if (review.state === "waiting-review") {
+    return <SignalBadge label="Waiting for review" tone="warning" />;
+  }
+  if (review.state === "approved") {
+    return (
+      <SignalBadge
+        label={`${review.approvals} approval recorded`}
+        tone="success"
+      />
+    );
+  }
+  return <SignalBadge label="No approval recorded" tone="neutral" />;
+}
+
+function CheckSignals({
+  checks,
+}: {
+  checks: PullRequestInsight["checks"]["data"];
+}) {
+  if (!checks.total) {
+    return <SignalBadge label="No check runs" tone="neutral" />;
+  }
+  return (
+    <>
+      {checks.failed ? (
+        <SignalBadge label={`${checks.failed} failed`} tone="danger" />
+      ) : null}
+      {checks.pending ? (
+        <SignalBadge label={`${checks.pending} pending`} tone="warning" />
+      ) : null}
+      {checks.successful ? (
+        <SignalBadge
+          label={`${checks.successful} checks passed`}
+          tone="success"
+        />
+      ) : null}
+      {checks.other ? (
+        <SignalBadge label={`${checks.other} other results`} tone="neutral" />
+      ) : null}
+    </>
+  );
+}
+
+function SignalBadge({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "danger" | "warning" | "success" | "neutral";
+}) {
+  const classes = {
+    danger: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+    warning:
+      "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    success:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    neutral: "text-muted-foreground bg-muted/50",
+  }[tone];
+
+  return (
+    <span
+      className={`inline-flex h-5 items-center rounded-full border px-2 text-xs font-medium ${classes}`}
+    >
+      {label}
+    </span>
   );
 }
 
@@ -387,7 +552,7 @@ function summarize(items: RepositoryOperation[]) {
   return {
     high: items.filter((item) => item.priority === "high").length,
     reviews: items.filter((item) => item.kind === "review").length,
-    workflows: items.filter((item) => item.kind === "workflow").length,
+    inspectedPullRequests: items.filter((item) => item.pullRequest).length,
   };
 }
 
@@ -395,6 +560,9 @@ function coverageLabel(value: string): string {
   return (
     {
       workQueues: "work queues",
+      pullRequests: "pull request details",
+      reviews: "pull request reviews",
+      checks: "pull request checks",
       workflows: "workflow runs",
       notifications: "notifications",
     }[value] ?? value
