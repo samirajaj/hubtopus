@@ -7,6 +7,7 @@ const productLinks = [
   { href: "/", label: "Explore" },
   { href: "/compare", label: "Compare" },
   { href: "/workspace", label: "Workspace" },
+  { href: "/workspace/operations", label: "Operations" },
   { href: "/workspace/health", label: "Health" },
 ] as const;
 

@@ -6,6 +6,7 @@ import {
   CircleAlert,
   GitPullRequest,
   Inbox,
+  ListChecks,
   LockKeyhole,
   LogOut,
   MessageSquare,
@@ -60,6 +61,12 @@ export function WorkspaceDashboard({ data }: { data: WorkspaceData }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="lg" asChild>
+            <Link href="/workspace/operations">
+              <ListChecks aria-hidden="true" />
+              Operations
+            </Link>
+          </Button>
           <Button variant="outline" size="lg" asChild>
             <Link href="/workspace/health">
               <ShieldCheck aria-hidden="true" />

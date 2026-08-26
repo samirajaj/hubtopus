@@ -21,6 +21,7 @@ Hubtopus is a focused GitHub developer explorer. Search for a GitHub username or
 - Private workspace with accessible public and private repositories
 - Personal queues for assigned issues, requested reviews, and authored pull requests
 - Permission-aware notifications and latest GitHub Actions failure checks
+- Prioritized repository operations queue with search, filters, deduplication, and direct GitHub actions
 - Repository maintenance signals for descriptions, licenses, topics, and activity
 - Filterable repository health center with severity, status, visibility, and direct remediation links
 - Explicit not-found, rate-limit, empty, loading, and unexpected-error states
@@ -76,6 +77,8 @@ Start with a read-only fine-grained token restricted to the repositories the use
 Repository discovery is bounded at 500 accessible repositories. Latest workflow status checks are limited to six recently updated, non-fork repositories that the user can maintain.
 
 The repository health center is available at `/workspace/health`. Its findings are factual rules rather than a synthetic score: latest workflow failure, no push within 12 months, missing public-project license, missing description, and missing topics. Archived repositories are shown but excluded from maintenance findings.
+
+The repository operations center is available at `/workspace/operations`. It creates a live, explainable queue from requested reviews, assigned issues, authored pull requests, latest workflow failures, and compatible notifications. Results are deduplicated and prioritized per request; operation history is not persisted.
 
 ### GitHub App registration
 

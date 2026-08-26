@@ -172,6 +172,7 @@ export type WorkspaceData = {
   }>;
   notifications: OptionalData<WorkspaceNotification[]>;
   workflowFailures: OptionalData<WorkflowFailure[]>;
+  workflowInspectionLimit: number;
 };
 
 export type RepositoryHealthCenterData = {
@@ -249,6 +250,7 @@ export async function getWorkspaceData(): Promise<WorkspaceData | null> {
     authoredPullRequests,
     notifications,
     workflowFailures,
+    workflowInspectionLimit: WORKFLOW_REPOSITORY_LIMIT,
   };
 }
 
