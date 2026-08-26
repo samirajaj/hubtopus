@@ -1,5 +1,5 @@
-import { LanguageBreakdown } from "@/components/language-breakdown";
-import { RepositoryBrowser } from "@/components/repository-browser";
+import { LanguageBreakdown } from "@/features/developer/components/language-breakdown";
+import { RepositoryBrowser } from "@/features/developer/components/repository-browser";
 import { DeveloperActivity } from "@/features/developer/components/developer-activity";
 import { DeveloperProfileHeader } from "@/features/developer/components/developer-profile-header";
 import { PortfolioBrief } from "@/features/developer/components/portfolio-brief";

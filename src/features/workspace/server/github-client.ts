@@ -1,6 +1,6 @@
 import "server-only";
 
-import { requestGitHub } from "@/lib/github/request";
+import { requestGitHub } from "@/lib/github/client";
 
 export async function authenticatedRequest(token: string, path: string) {
   return requestGitHub(path, {

@@ -1,6 +1,6 @@
 import { Code2, GitFork, Star } from "lucide-react";
 
-import { AppHeader } from "@/components/app-header";
+import { AppHeader } from "@/components/app/app-header";
 import { DeveloperSearch } from "@/components/developer-search";
 
 export default function Home() {

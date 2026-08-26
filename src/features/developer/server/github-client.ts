@@ -1,6 +1,6 @@
 import "server-only";
 
-import { requestGitHub } from "@/lib/github/request";
+import { requestGitHub } from "@/lib/github/client";
 
 const REVALIDATE_SECONDS = 900;
 

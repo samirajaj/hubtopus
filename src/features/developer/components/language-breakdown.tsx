@@ -1,6 +1,6 @@
 import { Code2 } from "lucide-react";
 
-import type { Repository } from "@/lib/github";
+import type { Repository } from "@/features/developer/types";
 
 const LANGUAGE_COLORS = [
   "var(--chart-1)",

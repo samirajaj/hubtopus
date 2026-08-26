@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
-import { AppHeader } from "@/components/app-header";
-import { WorkspaceDashboard } from "@/components/workspace-dashboard";
+import { AppHeader } from "@/components/app/app-header";
+import { WorkspaceDashboard } from "@/features/workspace/components/workspace-dashboard";
 import { GitHubApiError } from "@/lib/github/errors";
-import { getWorkspaceData } from "@/lib/github-workspace";
+import { getWorkspaceData } from "@/features/workspace/server/workspace-service";
 
 export const dynamic = "force-dynamic";
 

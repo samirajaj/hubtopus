@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { AppHeader } from "@/components/app-header";
-import { ComparisonForm } from "@/components/comparison-form";
+import { AppHeader } from "@/components/app/app-header";
+import { ComparisonForm } from "@/features/developer/components/comparison-form";
 import { normalizeGitHubUsername } from "@/lib/username";
 
 export const metadata: Metadata = {

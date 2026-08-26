@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { KeyRound, LockKeyhole, LogIn } from "lucide-react";
 
-import { AppHeader } from "@/components/app-header";
+import { AppHeader } from "@/components/app/app-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isGitHubAppConfigured } from "@/lib/github-auth";

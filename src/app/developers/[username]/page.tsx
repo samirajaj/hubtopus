@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
-import { AppHeader } from "@/components/app-header";
-import { DeveloperDashboard } from "@/components/developer-dashboard";
-import { GitHubErrorState } from "@/components/github-error-state";
-import { getDeveloperData } from "@/lib/github";
+import { AppHeader } from "@/components/app/app-header";
+import { DeveloperDashboard } from "@/features/developer/components/developer-dashboard";
+import { GitHubErrorState } from "@/components/app/github-error-state";
+import { getDeveloperData } from "@/features/developer/server/developer-service";
 import { GitHubApiError } from "@/lib/github/errors";
 import { normalizeGitHubUsername } from "@/lib/username";
 

@@ -1,4 +1,4 @@
-import { AppHeader } from "@/components/app-header";
+import { AppHeader } from "@/components/app/app-header";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function RepositoryOperationsLoading() {

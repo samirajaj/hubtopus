@@ -2,6 +2,8 @@ import "server-only";
 
 import { z } from "zod";
 
+import { summarizeCheckRuns } from "@/features/operations/domain/check-summary";
+import { summarizePullRequestReviews } from "@/features/operations/domain/review-summary";
 import {
   checkRunsSchema,
   pullRequestDetailSchema,
@@ -10,8 +12,6 @@ import {
 import type {
   PullRequestCheckSummary,
   PullRequestInsight,
-  PullRequestReviewState,
-  PullRequestReviewSummary,
   PullRequestTarget,
 } from "@/features/operations/types";
 import { GitHubApiError } from "@/lib/github/errors";
@@ -20,15 +20,6 @@ import { loadRemote } from "@/lib/github/result";
 
 export const PULL_REQUEST_INSPECTION_LIMIT = 10;
 const INSPECTION_CONCURRENCY = 3;
-const FAILED_CHECK_CONCLUSIONS = new Set([
-  "action_required",
-  "cancelled",
-  "failure",
-  "stale",
-  "startup_failure",
-  "timed_out",
-]);
-
 type GitHubRequest = (path: string) => Promise<unknown>;
 
 export async function fetchPullRequestInsights(
@@ -107,41 +98,6 @@ async function fetchPullRequestInsight(
   };
 }
 
-function summarizePullRequestReviews(
-  reviews: z.infer<typeof pullRequestReviewSchema>[],
-  isDraft: boolean,
-  requestedReviewers: string[],
-): PullRequestReviewSummary {
-  const latestDecisions = new Map<string, "APPROVED" | "CHANGES_REQUESTED">();
-
-  for (const review of reviews) {
-    if (!review.user) continue;
-    if (review.state === "APPROVED" || review.state === "CHANGES_REQUESTED") {
-      latestDecisions.set(review.user.login, review.state);
-    } else if (review.state === "DISMISSED") {
-      latestDecisions.delete(review.user.login);
-    }
-  }
-
-  const approvals = [...latestDecisions.values()].filter(
-    (state) => state === "APPROVED",
-  ).length;
-  const changesRequested = [...latestDecisions.values()].filter(
-    (state) => state === "CHANGES_REQUESTED",
-  ).length;
-  const state: PullRequestReviewState = isDraft
-    ? "draft"
-    : changesRequested
-      ? "changes-requested"
-      : requestedReviewers.length
-        ? "waiting-review"
-        : approvals
-          ? "approved"
-          : "none";
-
-  return { state, approvals, changesRequested, requestedReviewers };
-}
-
 async function fetchPullRequestChecks(
   request: GitHubRequest,
   repository: string,
@@ -154,24 +110,7 @@ async function fetchPullRequestChecks(
     ),
     "check run data",
   );
-  const failedRuns = result.check_runs.filter((run) =>
-    FAILED_CHECK_CONCLUSIONS.has(run.conclusion ?? ""),
-  );
-  const pending = result.check_runs.filter(
-    (run) => run.status !== "completed" || run.conclusion === null,
-  ).length;
-  const successful = result.check_runs.filter(
-    (run) => run.status === "completed" && run.conclusion === "success",
-  ).length;
-
-  return {
-    total: result.check_runs.length,
-    failed: failedRuns.length,
-    pending,
-    successful,
-    other: result.check_runs.length - failedRuns.length - pending - successful,
-    firstFailureUrl: failedRuns[0]?.html_url ?? null,
-  };
+  return summarizeCheckRuns(result.check_runs);
 }
 
 function repositoryApiPath(repository: string): string {
@@ -201,7 +140,7 @@ async function mapWithConcurrency<T, R>(
     while (nextIndex < values.length) {
       const index = nextIndex;
       nextIndex += 1;
-      results[index] = await mapper(values[index]);
+      results[index] = await mapper(values[index]!);
     }
   }
 

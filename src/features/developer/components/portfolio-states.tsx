@@ -1,3 +1,4 @@
+import { AvailabilityNotice } from "@/components/app/availability-notice";
 import type { RemoteResultStatus } from "@/lib/github/result";
 
 export function BriefFact({ label, value }: { label: string; value: string }) {
@@ -19,13 +20,15 @@ export function OptionalNotice({
   compact?: boolean;
 }) {
   return (
-    <p
-      className={`${compact ? "mt-4 p-3" : "p-6"} text-muted-foreground rounded-md border border-dashed text-sm`}
-    >
-      {status === "rate-limit"
-        ? `GitHub's rate limit prevented loading ${label}.`
-        : `GitHub could not provide ${label} right now.`}
-    </p>
+    <AvailabilityNotice
+      status={status}
+      title={
+        status === "rate-limit"
+          ? `GitHub's rate limit prevented loading ${label}.`
+          : `GitHub could not provide ${label} right now.`
+      }
+      className={compact ? "mt-4 p-3" : "p-6"}
+    />
   );
 }
 

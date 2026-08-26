@@ -11,10 +11,7 @@ import {
   compareOperations,
   deduplicateOperations,
 } from "@/features/operations/domain/operation-utils";
-import type {
-  PullRequestInsight,
-  RepositoryOperationsData,
-} from "@/features/operations/types";
+import type { RepositoryOperationsData } from "@/features/operations/types";
 import type { WorkspaceData } from "@/features/workspace/types";
 import { remoteDataOr } from "@/lib/github/result";
 

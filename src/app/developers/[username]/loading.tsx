@@ -1,4 +1,4 @@
-import { AppHeader } from "@/components/app-header";
+import { AppHeader } from "@/components/app/app-header";
 import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 
 export default function LoadingDeveloper() {

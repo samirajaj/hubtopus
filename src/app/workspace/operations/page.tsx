@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
-import { AppHeader } from "@/components/app-header";
-import { RepositoryOperationsCenter } from "@/components/repository-operations-center";
+import { AppHeader } from "@/components/app/app-header";
+import { RepositoryOperationsCenter } from "@/features/operations/components/operations-center";
 import { GitHubApiError } from "@/lib/github/errors";
-import { getWorkspaceData } from "@/lib/github-workspace";
-import { buildRepositoryOperations } from "@/lib/repository-operations";
+import { buildRepositoryOperations } from "@/features/operations/domain/build-operations";
+import { getWorkspaceData } from "@/features/workspace/server/workspace-service";
 
 export const dynamic = "force-dynamic";
 

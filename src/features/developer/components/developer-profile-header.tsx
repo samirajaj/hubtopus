@@ -8,7 +8,7 @@ import {
   MapPin,
 } from "lucide-react";
 
-import { BriefActions } from "@/components/brief-actions";
+import { BriefActions } from "@/features/developer/components/brief-actions";
 import type { DeveloperProfile } from "@/features/developer/types";
 
 export function DeveloperProfileHeader({

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
-import { AppHeader } from "@/components/app-header";
-import { ComparisonForm } from "@/components/comparison-form";
-import { ComparisonPageContent } from "@/components/comparison-page-content";
+import { AppHeader } from "@/components/app/app-header";
+import { ComparisonForm } from "@/features/developer/components/comparison-form";
+import { ComparisonPageContent } from "@/features/developer/components/comparison-page-content";
 import { normalizeGitHubUsername } from "@/lib/username";
 
 type PageProps = { params: Promise<{ left: string; right: string }> };

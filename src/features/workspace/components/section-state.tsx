@@ -37,14 +37,16 @@ export function Unavailable({
   detail?: string;
 }) {
   return (
-    <div className="text-muted-foreground border-y py-6 text-sm">
-      <p>
-        {status === "rate-limit"
+    <AvailabilityNotice
+      status={status}
+      title={
+        status === "rate-limit"
           ? "GitHub is temporarily rate limiting this section."
-          : "The connected token cannot provide this section."}
-      </p>
-      {detail ? <p className="mt-1 text-xs">{detail}</p> : null}
-    </div>
+          : "The connected token cannot provide this section."
+      }
+      detail={detail}
+      className="rounded-none border-x-0"
+    />
   );
 }
 
@@ -53,3 +55,4 @@ export function Empty({ message }: { message: string }) {
     <p className="text-muted-foreground border-y py-6 text-sm">{message}</p>
   );
 }
+import { AvailabilityNotice } from "@/components/app/availability-notice";

@@ -13,11 +13,11 @@ import {
   type VisibilityFilter,
 } from "@/features/repository-health/components/health-toolbar";
 import { RepositoryHealthItem } from "@/features/repository-health/components/repository-health-item";
+import { buildRepositoryHealthRecords } from "@/features/repository-health/domain/build-health-records";
 import {
-  buildRepositoryHealthRecords,
-  severityRank,
-} from "@/features/repository-health/domain/build-health-records";
-import type { RepositoryHealthRecord } from "@/features/repository-health/types";
+  compareHealthRecords,
+  summarizeHealthRecords,
+} from "@/features/repository-health/domain/health-view";
 import type { RepositoryHealthCenterData } from "@/features/workspace/types";
 import { formatDate } from "@/lib/date";
 
@@ -34,7 +34,7 @@ export function RepositoryHealthCenter({
   const [visibility, setVisibility] = useState<VisibilityFilter>("all");
   const [page, setPage] = useState(1);
   const records = useMemo(() => buildRepositoryHealthRecords(data), [data]);
-  const summary = useMemo(() => summarize(records), [records]);
+  const summary = useMemo(() => summarizeHealthRecords(records), [records]);
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -66,7 +66,7 @@ export function RepositoryHealthCenter({
           .toLowerCase()
           .includes(normalizedQuery);
       })
-      .sort(compareRecords);
+      .sort(compareHealthRecords);
   }, [query, records, severity, status, visibility]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -75,9 +75,6 @@ export function RepositoryHealthCenter({
     (safePage - 1) * PAGE_SIZE,
     safePage * PAGE_SIZE,
   );
-  const hasFilters =
-    query || status !== "all" || severity !== "all" || visibility !== "all";
-
   function updateFilter(update: () => void) {
     update();
     setPage(1);
@@ -183,35 +180,5 @@ export function RepositoryHealthCenter({
         request.
       </p>
     </main>
-  );
-}
-
-function summarize(records: RepositoryHealthRecord[]) {
-  return {
-    attention: records.filter((record) => record.status === "attention").length,
-    healthy: records.filter((record) => record.status === "healthy").length,
-    archived: records.filter((record) => record.status === "archived").length,
-    high: records.filter((record) =>
-      record.findings.some((finding) => finding.severity === "high"),
-    ).length,
-  };
-}
-
-function compareRecords(
-  left: RepositoryHealthRecord,
-  right: RepositoryHealthRecord,
-) {
-  const leftSeverity = Math.max(
-    0,
-    ...left.findings.map((finding) => severityRank(finding.severity)),
-  );
-  const rightSeverity = Math.max(
-    0,
-    ...right.findings.map((finding) => severityRank(finding.severity)),
-  );
-  return (
-    rightSeverity - leftSeverity ||
-    right.findings.length - left.findings.length ||
-    left.repository.fullName.localeCompare(right.repository.fullName)
   );
 }
