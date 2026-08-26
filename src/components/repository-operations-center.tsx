@@ -3,28 +3,29 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
-  CircleX,
   ListChecks,
   Search,
   ShieldCheck,
   X,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { PullRequestInsight } from "@/lib/github-pull-requests";
+  CoverageNotice,
+  getLimitedCoverage,
+  isExpectedNotificationLimitation,
+} from "@/components/repository-operations/coverage-notice";
+import {
+  OperationItem,
+  operationKindLabels,
+} from "@/components/repository-operations/operation-item";
+import { FilterSelect } from "@/components/workspace/filter-select";
+import { SummaryFact } from "@/components/workspace/summary-fact";
+import { formatDateTime } from "@/lib/date";
+import { Input } from "@/components/ui/input";
 import type {
   OperationKind,
   OperationPriority,
@@ -35,14 +36,6 @@ import type {
 const PAGE_SIZE = 15;
 type PriorityFilter = "all" | OperationPriority;
 type KindFilter = "all" | OperationKind;
-
-const kindLabels: Record<OperationKind, string> = {
-  review: "Review request",
-  issue: "Assigned issue",
-  "pull-request": "Your pull request",
-  workflow: "Workflow failure",
-  notification: "Notification",
-};
 
 export function RepositoryOperationsCenter({
   data,
@@ -60,7 +53,12 @@ export function RepositoryOperationsCenter({
       if (priority !== "all" && item.priority !== priority) return false;
       if (kind !== "all" && item.kind !== kind) return false;
       if (!normalizedQuery) return true;
-      return [item.title, item.detail, item.repository, kindLabels[item.kind]]
+      return [
+        item.title,
+        item.detail,
+        item.repository,
+        operationKindLabels[item.kind],
+      ]
         .join(" ")
         .toLowerCase()
         .includes(normalizedQuery);
@@ -154,6 +152,7 @@ export function RepositoryOperationsCenter({
             </div>
             <FilterSelect
               label="Priority"
+              className="lg:w-48"
               value={priority}
               onChange={(value) =>
                 updateFilter(() => setPriority(value as PriorityFilter))
@@ -167,6 +166,7 @@ export function RepositoryOperationsCenter({
             />
             <FilterSelect
               label="Operation type"
+              className="lg:w-48"
               value={kind}
               onChange={(value) =>
                 updateFilter(() => setKind(value as KindFilter))
@@ -280,341 +280,10 @@ export function RepositoryOperationsCenter({
   );
 }
 
-function OperationItem({
-  item,
-  referenceTime,
-}: {
-  item: RepositoryOperation;
-  referenceTime: string;
-}) {
-  return (
-    <article className="grid gap-4 px-1 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <PriorityBadge priority={item.priority} />
-          <Badge variant="outline">{kindLabels[item.kind]}</Badge>
-          <span className="text-muted-foreground truncate text-xs">
-            {item.repository}
-          </span>
-        </div>
-        <h3 className="mt-2 line-clamp-2 text-sm font-semibold">
-          {item.title}
-        </h3>
-        <p className="text-muted-foreground mt-1 text-xs leading-5">
-          {item.detail}
-        </p>
-        <p className="text-muted-foreground mt-1 text-xs">
-          Updated {formatRelativeDate(item.updatedAt, referenceTime)}
-        </p>
-        {item.pullRequest ? (
-          <PullRequestSignals insight={item.pullRequest} />
-        ) : null}
-      </div>
-      <div className="flex flex-wrap gap-2 sm:justify-end">
-        {item.pullRequest?.checks.data.firstFailureUrl ? (
-          <Button variant="outline" size="sm" asChild>
-            <a
-              href={item.pullRequest.checks.data.firstFailureUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <CircleX aria-hidden="true" />
-              Failed check
-            </a>
-          </Button>
-        ) : null}
-        <Button variant="outline" size="sm" asChild>
-          <a href={item.url} target="_blank" rel="noreferrer">
-            {item.action}
-            <ArrowUpRight aria-hidden="true" />
-          </a>
-        </Button>
-      </div>
-    </article>
-  );
-}
-
-function PullRequestSignals({ insight }: { insight: PullRequestInsight }) {
-  const review = insight.review.data;
-  const checks = insight.checks.data;
-  const requestedReviewers = review.requestedReviewers.join(", ");
-
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      {insight.isDraft ? <SignalBadge label="Draft" tone="neutral" /> : null}
-      <SignalBadge
-        label={
-          insight.mergeability === "conflicting"
-            ? "Merge conflict"
-            : insight.mergeability === "mergeable"
-              ? "Mergeable"
-              : "Mergeability pending"
-        }
-        tone={
-          insight.mergeability === "conflicting"
-            ? "danger"
-            : insight.mergeability === "mergeable"
-              ? "success"
-              : "neutral"
-        }
-      />
-      {insight.review.status === "ready" ? (
-        <ReviewSignal review={review} />
-      ) : (
-        <SignalBadge
-          label={
-            insight.review.status === "rate-limit"
-              ? "Reviews rate limited"
-              : "Reviews unavailable"
-          }
-          tone="neutral"
-        />
-      )}
-      {insight.checks.status === "ready" ? (
-        <CheckSignals checks={checks} />
-      ) : (
-        <SignalBadge
-          label={
-            insight.checks.status === "rate-limit"
-              ? "Checks rate limited"
-              : "Checks unavailable"
-          }
-          tone="neutral"
-        />
-      )}
-      {requestedReviewers ? (
-        <span
-          className="text-muted-foreground max-w-full truncate text-xs"
-          title={requestedReviewers}
-        >
-          Requested: {requestedReviewers}
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-function ReviewSignal({
-  review,
-}: {
-  review: PullRequestInsight["review"]["data"];
-}) {
-  if (review.state === "draft") return null;
-  if (review.state === "changes-requested") {
-    return (
-      <SignalBadge
-        label={`${review.changesRequested} requested changes`}
-        tone="danger"
-      />
-    );
-  }
-  if (review.state === "waiting-review") {
-    return <SignalBadge label="Waiting for review" tone="warning" />;
-  }
-  if (review.state === "approved") {
-    return (
-      <SignalBadge
-        label={`${review.approvals} approval recorded`}
-        tone="success"
-      />
-    );
-  }
-  return <SignalBadge label="No approval recorded" tone="neutral" />;
-}
-
-function CheckSignals({
-  checks,
-}: {
-  checks: PullRequestInsight["checks"]["data"];
-}) {
-  if (!checks.total) {
-    return <SignalBadge label="No check runs" tone="neutral" />;
-  }
-  return (
-    <>
-      {checks.failed ? (
-        <SignalBadge label={`${checks.failed} failed`} tone="danger" />
-      ) : null}
-      {checks.pending ? (
-        <SignalBadge label={`${checks.pending} pending`} tone="warning" />
-      ) : null}
-      {checks.successful ? (
-        <SignalBadge
-          label={`${checks.successful} checks passed`}
-          tone="success"
-        />
-      ) : null}
-      {checks.other ? (
-        <SignalBadge label={`${checks.other} other results`} tone="neutral" />
-      ) : null}
-    </>
-  );
-}
-
-function SignalBadge({
-  label,
-  tone,
-}: {
-  label: string;
-  tone: "danger" | "warning" | "success" | "neutral";
-}) {
-  const classes = {
-    danger: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
-    warning:
-      "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-    success:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-    neutral: "text-muted-foreground bg-muted/50",
-  }[tone];
-
-  return (
-    <span
-      className={`inline-flex h-5 items-center rounded-full border px-2 text-xs font-medium ${classes}`}
-    >
-      {label}
-    </span>
-  );
-}
-
-function CoverageNotice({ limited }: { limited: string[] }) {
-  return (
-    <div className="mt-6 flex gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
-      <CircleAlert
-        className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
-        aria-hidden="true"
-      />
-      <div>
-        <p className="font-medium">Some operation sources are limited</p>
-        <p className="text-muted-foreground mt-1 text-xs leading-5">
-          Available results are still shown. Limited sources:{" "}
-          {limited.join(", ")}.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function getLimitedCoverage(data: RepositoryOperationsData): string[] {
-  return Object.entries(data.coverage)
-    .filter(([source, status]) => {
-      if (status === "ready") return false;
-      return !(
-        source === "notifications" &&
-        status === "unavailable" &&
-        data.connectionMethod === "github-app"
-      );
-    })
-    .map(
-      ([source, status]) => `${coverageLabel(source)} (${statusLabel(status)})`,
-    );
-}
-
-function isExpectedNotificationLimitation(
-  data: RepositoryOperationsData,
-): boolean {
-  return (
-    data.connectionMethod === "github-app" &&
-    data.coverage.notifications === "unavailable"
-  );
-}
-
-function PriorityBadge({ priority }: { priority: OperationPriority }) {
-  const classes = {
-    high: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
-    medium:
-      "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-    low: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  }[priority];
-  return (
-    <span
-      className={`inline-flex h-5 items-center rounded-full border px-2 text-xs font-medium capitalize ${classes}`}
-    >
-      {priority}
-    </span>
-  );
-}
-
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: Array<[string, string]>;
-}) {
-  return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-9 w-full lg:w-48" aria-label={label}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent align="end">
-        {options.map(([optionValue, optionLabel]) => (
-          <SelectItem key={optionValue} value={optionValue}>
-            {optionLabel}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function SummaryFact({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="bg-background min-w-0 px-4 py-5 sm:px-5">
-      <dt className="text-muted-foreground text-xs font-medium">{label}</dt>
-      <dd className="mt-2 text-2xl font-semibold tabular-nums">
-        {value.toLocaleString()}
-      </dd>
-    </div>
-  );
-}
-
 function summarize(items: RepositoryOperation[]) {
   return {
     high: items.filter((item) => item.priority === "high").length,
     reviews: items.filter((item) => item.kind === "review").length,
     inspectedPullRequests: items.filter((item) => item.pullRequest).length,
   };
-}
-
-function coverageLabel(value: string): string {
-  return (
-    {
-      workQueues: "work queues",
-      pullRequests: "pull request details",
-      reviews: "pull request reviews",
-      checks: "pull request checks",
-      workflows: "workflow runs",
-      notifications: "notifications",
-    }[value] ?? value
-  );
-}
-
-function statusLabel(value: string): string {
-  return value === "rate-limit" ? "rate limited" : "permission unavailable";
-}
-
-function formatRelativeDate(value: string, referenceTime: string): string {
-  const days = Math.max(
-    0,
-    Math.floor(
-      (new Date(referenceTime).getTime() - new Date(value).getTime()) /
-        86_400_000,
-    ),
-  );
-  if (days === 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days} days ago`;
-  if (days < 365) return `${Math.floor(days / 30)} months ago`;
-  return `${Math.floor(days / 365)} years ago`;
-}
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }

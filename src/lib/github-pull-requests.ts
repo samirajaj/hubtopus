@@ -2,7 +2,9 @@ import "server-only";
 
 import { z } from "zod";
 
-import { GitHubApiError, type OptionalData } from "@/lib/github";
+import { GitHubApiError } from "@/lib/github/errors";
+import { parseGitHubResponse } from "@/lib/github/parse";
+import { loadOptional, type OptionalData } from "@/lib/github/result";
 
 export const PULL_REQUEST_INSPECTION_LIMIT = 10;
 const INSPECTION_CONCURRENCY = 3;
@@ -121,7 +123,7 @@ async function fetchPullRequestInsight(
   target: PullRequestTarget,
 ): Promise<PullRequestInsight> {
   const path = pullRequestApiPath(target.repository, target.number);
-  const detail = parseExternal(
+  const detail = parseGitHubResponse(
     pullRequestDetailSchema,
     await request(path),
     "pull request detail data",
@@ -137,7 +139,7 @@ async function fetchPullRequestInsight(
   );
   const [review, checks] = await Promise.all([
     loadOptional(async () => {
-      const reviews = parseExternal(
+      const reviews = parseGitHubResponse(
         z.array(pullRequestReviewSchema),
         await request(`${path}/reviews?per_page=100`),
         "pull request review data",
@@ -209,7 +211,7 @@ async function fetchPullRequestChecks(
   repository: string,
   headSha: string,
 ): Promise<PullRequestCheckSummary> {
-  const result = parseExternal(
+  const result = parseGitHubResponse(
     checkRunsSchema,
     await request(
       `${repositoryApiPath(repository)}/commits/${encodeURIComponent(headSha)}/check-runs?filter=latest&per_page=100`,
@@ -245,36 +247,6 @@ function emptyPullRequestChecks(): PullRequestCheckSummary {
     other: 0,
     firstFailureUrl: null,
   };
-}
-
-async function loadOptional<T>(
-  loader: () => Promise<T>,
-  fallback: T,
-): Promise<OptionalData<T>> {
-  try {
-    return { status: "ready", data: await loader() };
-  } catch (error) {
-    return {
-      status:
-        error instanceof GitHubApiError && error.kind === "rate-limit"
-          ? "rate-limit"
-          : "unavailable",
-      data: fallback,
-    };
-  }
-}
-
-function parseExternal<T>(
-  schema: z.ZodType<T>,
-  value: unknown,
-  description: string,
-): T {
-  const result = schema.safeParse(value);
-  if (result.success) return result.data;
-  throw new GitHubApiError(
-    "unavailable",
-    `GitHub returned ${description} in an unexpected format.`,
-  );
 }
 
 function repositoryApiPath(repository: string): string {

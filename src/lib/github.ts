@@ -2,7 +2,10 @@ import "server-only";
 
 import { z } from "zod";
 
-const API_ROOT = "https://api.github.com";
+import { parseGitHubResponse } from "@/lib/github/parse";
+import { requestGitHub } from "@/lib/github/request";
+import { loadOptional, type OptionalData } from "@/lib/github/result";
+
 const REVALIDATE_SECONDS = 900;
 const REPOSITORY_ANALYSIS_LIMIT = 3;
 
@@ -182,13 +185,6 @@ export type RepositoryRelease = {
   isPrerelease: boolean;
 };
 
-export type OptionalDataStatus = "ready" | "rate-limit" | "unavailable";
-
-export type OptionalData<T> = {
-  status: OptionalDataStatus;
-  data: T;
-};
-
 export type RepositoryInsight = {
   repositoryId: number;
   health: OptionalData<RepositoryHealth | null>;
@@ -212,98 +208,17 @@ export type DeveloperData = DeveloperSummary & {
   repositoryInsights: RepositoryInsight[];
 };
 
-export type GitHubErrorKind = "not-found" | "rate-limit" | "unavailable";
-
-export class GitHubApiError extends Error {
-  constructor(
-    public readonly kind: GitHubErrorKind,
-    message: string,
-    public readonly resetAt?: Date,
-  ) {
-    super(message);
-    this.name = "GitHubApiError";
-  }
-}
-
-function githubHeaders(accept = "application/vnd.github+json"): HeadersInit {
-  const headers: Record<string, string> = {
-    Accept: accept,
-    "X-GitHub-Api-Version": "2022-11-28",
-    "User-Agent": "Hubtopus",
-  };
-
-  if (process.env.GITHUB_TOKEN) {
-    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-  }
-
-  return headers;
-}
-
 async function githubRequest(
   path: string,
   options: { allowNotFound?: boolean; accept?: string } = {},
 ): Promise<unknown | null> {
-  let response: Response;
-
-  try {
-    response = await fetch(`${API_ROOT}${path}`, {
-      headers: githubHeaders(options.accept),
-      next: { revalidate: REVALIDATE_SECONDS },
-    });
-  } catch {
-    throw new GitHubApiError(
-      "unavailable",
-      "Hubtopus could not connect to GitHub's API.",
-    );
-  }
-
-  if (response.ok) {
-    if (response.status === 204) return null;
-    return response.json();
-  }
-
-  const remaining = response.headers.get("x-ratelimit-remaining");
-  const retryAfter = response.headers.get("retry-after");
-  if (
-    response.status === 429 ||
-    (response.status === 403 && (remaining === "0" || retryAfter))
-  ) {
-    const reset = response.headers.get("x-ratelimit-reset");
-    const resetAt = reset
-      ? new Date(Number(reset) * 1000)
-      : retryAfter
-        ? new Date(Date.now() + Number(retryAfter) * 1000)
-        : undefined;
-    throw new GitHubApiError(
-      "rate-limit",
-      "GitHub's API rate limit has been reached.",
-      resetAt,
-    );
-  }
-
-  if (response.status === 404 && options.allowNotFound) return null;
-  if (response.status === 404) {
-    throw new GitHubApiError("not-found", "That GitHub user was not found.");
-  }
-
-  throw new GitHubApiError(
-    "unavailable",
-    `GitHub returned an unexpected ${response.status} response.`,
-  );
-}
-
-function parseExternal<T>(
-  schema: z.ZodType<T>,
-  value: unknown,
-  description: string,
-): T {
-  const result = schema.safeParse(value);
-  if (result.success) return result.data;
-
-  throw new GitHubApiError(
-    "unavailable",
-    `GitHub returned ${description} in an unexpected format.`,
-  );
+  return requestGitHub(path, {
+    token: process.env.GITHUB_TOKEN,
+    accept: options.accept,
+    allowNotFound: options.allowNotFound,
+    notFoundMessage: "That GitHub user was not found.",
+    cache: { revalidate: REVALIDATE_SECONDS },
+  });
 }
 
 function normalizeWebsite(value: string): string | null {
@@ -427,7 +342,7 @@ function capitalize(value: string): string {
 
 async function fetchProfile(username: string): Promise<DeveloperProfile> {
   const rawUser = await githubRequest(`/users/${encodeURIComponent(username)}`);
-  const user = parseExternal(userSchema, rawUser, "profile data");
+  const user = parseGitHubResponse(userSchema, rawUser, "profile data");
   return transformProfile(user);
 }
 
@@ -436,7 +351,7 @@ async function fetchRepositories(
 ): Promise<Repository[]> {
   const pageCount = Math.ceil(profile.publicRepositories / 100);
   const rawPages = await fetchRepositoryPages(profile.login, pageCount);
-  const repositories = parseExternal(
+  const repositories = parseGitHubResponse(
     z.array(repositorySchema),
     rawPages.flat(),
     "repository data",
@@ -463,14 +378,14 @@ export async function getDeveloperData(
       `/users/${encodedUsername}/events/public?per_page=30`,
     );
     return transformEvents(
-      parseExternal(z.array(eventSchema), raw, "event data"),
+      parseGitHubResponse(z.array(eventSchema), raw, "event data"),
     );
   }, []);
   const organizationsPromise = loadOptional(async () => {
     const raw = await githubRequest(
       `/users/${encodedUsername}/orgs?per_page=100`,
     );
-    return parseExternal(
+    return parseGitHubResponse(
       z.array(organizationSchema),
       raw,
       "organization data",
@@ -486,7 +401,7 @@ export async function getDeveloperData(
     const raw = await githubRequest(
       `/users/${encodedUsername}/starred?sort=created&direction=desc&per_page=100`,
     );
-    return parseExternal(
+    return parseGitHubResponse(
       z.array(repositorySchema),
       raw,
       "starred repository data",
@@ -547,7 +462,7 @@ async function fetchExternalContributions(
   const raw = await githubRequest(
     `/search/issues?q=${query}&sort=updated&order=desc&per_page=30`,
   );
-  const result = parseExternal(
+  const result = parseGitHubResponse(
     contributionSearchSchema,
     raw,
     "pull request search data",
@@ -585,7 +500,7 @@ async function fetchRepositoryInsight(
         allowNotFound: true,
       });
       if (raw === null) return null;
-      const profile = parseExternal(
+      const profile = parseGitHubResponse(
         communityProfileSchema,
         raw,
         "community profile data",
@@ -605,7 +520,7 @@ async function fetchRepositoryInsight(
         allowNotFound: true,
       });
       if (raw === null) return null;
-      const release = parseExternal(releaseSchema, raw, "release data");
+      const release = parseGitHubResponse(releaseSchema, raw, "release data");
       return {
         id: release.id,
         tagName: release.tag_name,
@@ -642,23 +557,6 @@ function transformEvents(
       },
     ];
   });
-}
-
-async function loadOptional<T>(
-  loader: () => Promise<T>,
-  fallback: T,
-): Promise<OptionalData<T>> {
-  try {
-    return { status: "ready", data: await loader() };
-  } catch (error) {
-    return {
-      status:
-        error instanceof GitHubApiError && error.kind === "rate-limit"
-          ? "rate-limit"
-          : "unavailable",
-      data: fallback,
-    };
-  }
 }
 
 async function fetchRepositoryPages(

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { AppHeader } from "@/components/app-header";
 import { RepositoryHealthCenter } from "@/components/repository-health-center";
-import { GitHubApiError } from "@/lib/github";
+import { GitHubApiError } from "@/lib/github/errors";
 import { getRepositoryHealthCenterData } from "@/lib/github-workspace";
 
 export const dynamic = "force-dynamic";

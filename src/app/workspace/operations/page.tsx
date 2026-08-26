@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { AppHeader } from "@/components/app-header";
 import { RepositoryOperationsCenter } from "@/components/repository-operations-center";
-import { GitHubApiError } from "@/lib/github";
+import { GitHubApiError } from "@/lib/github/errors";
 import { getWorkspaceData } from "@/lib/github-workspace";
 import { buildRepositoryOperations } from "@/lib/repository-operations";
 

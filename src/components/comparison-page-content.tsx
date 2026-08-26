@@ -1,7 +1,8 @@
 import { AppHeader } from "@/components/app-header";
 import { ComparisonForm } from "@/components/comparison-form";
 import { DeveloperComparison } from "@/components/developer-comparison";
-import { getDeveloperSummary, GitHubApiError } from "@/lib/github";
+import { getDeveloperSummary } from "@/lib/github";
+import { GitHubApiError } from "@/lib/github/errors";
 
 export async function ComparisonPageContent({
   left,

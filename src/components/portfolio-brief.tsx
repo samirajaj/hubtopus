@@ -10,12 +10,8 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import type {
-  DeveloperData,
-  OptionalDataStatus,
-  Repository,
-  RepositoryHealth,
-} from "@/lib/github";
+import type { DeveloperData, Repository, RepositoryHealth } from "@/lib/github";
+import type { OptionalDataStatus } from "@/lib/github/result";
 
 export function PortfolioBrief({ data }: { data: DeveloperData }) {
   return (

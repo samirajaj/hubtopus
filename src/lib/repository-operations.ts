@@ -1,4 +1,4 @@
-import type { OptionalDataStatus } from "@/lib/github";
+import type { OptionalDataStatus } from "@/lib/github/result";
 import type { PullRequestInsight } from "@/lib/github-pull-requests";
 import type {
   WorkspaceData,

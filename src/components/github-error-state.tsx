@@ -1,7 +1,7 @@
 import { AlertCircle, Clock3, SearchX } from "lucide-react";
 
 import { DeveloperSearch } from "@/components/developer-search";
-import type { GitHubErrorKind } from "@/lib/github";
+import type { GitHubErrorKind } from "@/lib/github/errors";
 
 export function GitHubErrorState({
   kind,

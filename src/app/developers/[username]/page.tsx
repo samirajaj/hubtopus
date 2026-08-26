@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { AppHeader } from "@/components/app-header";
 import { DeveloperDashboard } from "@/components/developer-dashboard";
 import { GitHubErrorState } from "@/components/github-error-state";
-import { getDeveloperData, GitHubApiError } from "@/lib/github";
+import { getDeveloperData } from "@/lib/github";
+import { GitHubApiError } from "@/lib/github/errors";
 import { normalizeGitHubUsername } from "@/lib/username";
 
 type DeveloperPageProps = {

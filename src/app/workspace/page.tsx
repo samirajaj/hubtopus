@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { AppHeader } from "@/components/app-header";
 import { WorkspaceDashboard } from "@/components/workspace-dashboard";
-import { GitHubApiError } from "@/lib/github";
+import { GitHubApiError } from "@/lib/github/errors";
 import { getWorkspaceData } from "@/lib/github-workspace";
 
 export const dynamic = "force-dynamic";

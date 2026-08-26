@@ -2,15 +2,17 @@ import "server-only";
 
 import { z } from "zod";
 
-import { GitHubApiError, type OptionalData } from "@/lib/github";
+import { GitHubApiError } from "@/lib/github/errors";
+import { parseGitHubResponse } from "@/lib/github/parse";
 import {
   fetchPullRequestInsights,
   PULL_REQUEST_INSPECTION_LIMIT,
   type PullRequestInsight,
 } from "@/lib/github-pull-requests";
 import { readGitHubSession } from "@/lib/github-session";
+import { requestGitHub } from "@/lib/github/request";
+import { loadOptional, type OptionalData } from "@/lib/github/result";
 
-const API_ROOT = "https://api.github.com";
 const MAX_REPOSITORY_PAGES = 5;
 const WORKFLOW_REPOSITORY_LIMIT = 6;
 
@@ -311,7 +313,7 @@ async function loadAuthenticatedContext() {
   if (!session) return null;
 
   const rawUser = await authenticatedRequest(session.token, "/user");
-  const user = parseExternal(
+  const user = parseGitHubResponse(
     authenticatedUserSchema,
     rawUser,
     "authenticated user data",
@@ -321,44 +323,11 @@ async function loadAuthenticatedContext() {
 }
 
 async function authenticatedRequest(token: string, path: string) {
-  let response: Response;
-  try {
-    response = await fetch(`${API_ROOT}${path}`, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${token}`,
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "Hubtopus",
-      },
-      cache: "no-store",
-    });
-  } catch {
-    throw new GitHubApiError(
-      "unavailable",
-      "Hubtopus could not connect to GitHub's API.",
-    );
-  }
-
-  if (response.ok) return response.status === 204 ? null : response.json();
-
-  const remaining = response.headers.get("x-ratelimit-remaining");
-  const retryAfter = response.headers.get("retry-after");
-  if (
-    response.status === 429 ||
-    (response.status === 403 && (remaining === "0" || retryAfter))
-  ) {
-    throw new GitHubApiError(
-      "rate-limit",
-      "GitHub's API rate limit has been reached.",
-    );
-  }
-
-  throw new GitHubApiError(
-    "unavailable",
-    response.status === 401
-      ? "The GitHub token is no longer valid."
-      : `GitHub returned an unexpected ${response.status} response.`,
-  );
+  return requestGitHub(path, {
+    token,
+    cache: "no-store",
+    unauthorizedMessage: "The GitHub token is no longer valid.",
+  });
 }
 
 async function fetchRepositories(token: string): Promise<{
@@ -373,7 +342,7 @@ async function fetchRepositories(token: string): Promise<{
       token,
       `/user/repos?visibility=all&affiliation=owner,collaborator,organization_member&sort=updated&per_page=100&page=${page}`,
     );
-    const batch = parseExternal(
+    const batch = parseGitHubResponse(
       z.array(workspaceRepositorySchema),
       raw,
       "repository data",
@@ -422,7 +391,7 @@ async function searchWork(
     token,
     `/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc&per_page=30`,
   );
-  const result = parseExternal(searchSchema, raw, "work queue data");
+  const result = parseGitHubResponse(searchSchema, raw, "work queue data");
 
   return {
     totalCount: result.total_count,
@@ -447,7 +416,7 @@ async function fetchNotifications(
     token,
     "/notifications?all=false&participating=false&per_page=50",
   );
-  const notifications = parseExternal(
+  const notifications = parseGitHubResponse(
     z.array(notificationSchema),
     raw,
     "notification data",
@@ -500,7 +469,7 @@ async function fetchWorkflowFailures(
           token,
           `/repos/${repository.fullName}/actions/runs?per_page=1`,
         );
-        const runs = parseExternal(
+        const runs = parseGitHubResponse(
           workflowRunsSchema,
           raw,
           "workflow run data",
@@ -538,36 +507,6 @@ async function fetchWorkflowFailures(
   }
 
   return results.flatMap((result) => (result.failure ? [result.failure] : []));
-}
-
-async function loadOptional<T>(
-  loader: () => Promise<T>,
-  fallback: T,
-): Promise<OptionalData<T>> {
-  try {
-    return { status: "ready", data: await loader() };
-  } catch (error) {
-    return {
-      status:
-        error instanceof GitHubApiError && error.kind === "rate-limit"
-          ? "rate-limit"
-          : "unavailable",
-      data: fallback,
-    };
-  }
-}
-
-function parseExternal<T>(
-  schema: z.ZodType<T>,
-  value: unknown,
-  description: string,
-): T {
-  const result = schema.safeParse(value);
-  if (result.success) return result.data;
-  throw new GitHubApiError(
-    "unavailable",
-    `GitHub returned ${description} in an unexpected format.`,
-  );
 }
 
 function repositoryFromApiUrl(value: string): string {

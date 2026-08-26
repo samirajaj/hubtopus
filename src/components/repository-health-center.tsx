@@ -15,13 +15,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FilterSelect } from "@/components/workspace/filter-select";
+import { SummaryFact } from "@/components/workspace/summary-fact";
+import { formatDate } from "@/lib/date";
 import type { RepositoryHealthCenterData } from "@/lib/github-workspace";
 import {
   buildRepositoryHealthRecords,
@@ -164,6 +160,7 @@ export function RepositoryHealthCenter({
             </div>
             <FilterSelect
               label="Status"
+              className="lg:w-40"
               value={status}
               onChange={(value) =>
                 updateFilter(() => setStatus(value as StatusFilter))
@@ -177,6 +174,7 @@ export function RepositoryHealthCenter({
             />
             <FilterSelect
               label="Severity"
+              className="lg:w-40"
               value={severity}
               onChange={(value) =>
                 updateFilter(() => setSeverity(value as SeverityFilter))
@@ -190,6 +188,7 @@ export function RepositoryHealthCenter({
             />
             <FilterSelect
               label="Visibility"
+              className="lg:w-40"
               value={visibility}
               onChange={(value) =>
                 updateFilter(() => setVisibility(value as VisibilityFilter))
@@ -374,44 +373,6 @@ function SeverityBadge({ severity }: { severity: HealthSeverity }) {
   );
 }
 
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: Array<[string, string]>;
-}) {
-  return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-9 w-full lg:w-40" aria-label={label}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent align="end">
-        {options.map(([optionValue, optionLabel]) => (
-          <SelectItem key={optionValue} value={optionValue}>
-            {optionLabel}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function SummaryFact({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="bg-background min-w-0 px-4 py-5 sm:px-5">
-      <dt className="text-muted-foreground text-xs font-medium">{label}</dt>
-      <dd className="mt-2 text-2xl font-semibold tabular-nums">
-        {value.toLocaleString()}
-      </dd>
-    </div>
-  );
-}
-
 function summarize(records: RepositoryHealthRecord[]) {
   return {
     attention: records.filter((record) => record.status === "attention").length,
@@ -440,14 +401,4 @@ function compareRecords(
     right.findings.length - left.findings.length ||
     left.repository.fullName.localeCompare(right.repository.fullName)
   );
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
 }

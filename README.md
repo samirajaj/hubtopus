@@ -32,6 +32,14 @@ Hubtopus is a focused GitHub developer explorer. Search for a GitHub username or
 
 Hubtopus uses Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui primitives, Lucide icons, Zod, and the GitHub REST API.
 
+## Project structure
+
+- `src/app` owns routes, metadata, loading states, and server entry points.
+- `src/components` contains page orchestration and reusable UI. Feature-specific workspace and operations components live in named subfolders.
+- `src/lib/github` contains the shared GitHub transport, validation, errors, and optional-result handling.
+- `src/lib/github*.ts` contains public profile, authenticated workspace, and pull request feature logic.
+- `src/lib/repository-*.ts` contains pure health and operations rules, separate from rendering and network access.
+
 ## Local development
 
 ```bash
@@ -96,6 +104,7 @@ GitHub responses are cached for 15 minutes to reduce duplicate requests. The com
 ## Production checks
 
 ```bash
+npm run typecheck
 npm run lint
 npm run build
 npm start
